@@ -1,0 +1,32 @@
+[
+    {
+        "command": "g++ -o .pio\\build\\native\\src\\DecisionEngine.o -c -std=c++11 -DPLATFORMIO=60119 -Iinclude -Isrc src\\DecisionEngine.cpp",
+        "directory": "D:\\workspace\\MBTI_Parallel",
+        "file": "src\\DecisionEngine.cpp",
+        "output": ".pio\\build\\native\\src\\DecisionEngine.o"
+    },
+    {
+        "command": "g++ -o .pio\\build\\native\\src\\MBTIProfile.o -c -std=c++11 -DPLATFORMIO=60119 -Iinclude -Isrc src\\MBTIProfile.cpp",
+        "directory": "D:\\workspace\\MBTI_Parallel",
+        "file": "src\\MBTIProfile.cpp",
+        "output": ".pio\\build\\native\\src\\MBTIProfile.o"
+    },
+    {
+        "command": "g++ -o .pio\\build\\native\\src\\ScenarioBuilder.o -c -std=c++11 -DPLATFORMIO=60119 -Iinclude -Isrc src\\ScenarioBuilder.cpp",
+        "directory": "D:\\workspace\\MBTI_Parallel",
+        "file": "src\\ScenarioBuilder.cpp",
+        "output": ".pio\\build\\native\\src\\ScenarioBuilder.o"
+    },
+    {
+        "command": "g++ -o .pio\\build\\native\\src\\ScenarioMapper.o -c -std=c++11 -DPLATFORMIO=60119 -Iinclude -Isrc src\\ScenarioMapper.cpp",
+        "directory": "D:\\workspace\\MBTI_Parallel",
+        "file": "src\\ScenarioMapper.cpp",
+        "output": ".pio\\build\\native\\src\\ScenarioMapper.o"
+    },
+    {
+        "command": "g++ -o .pio\\build\\native\\src\\main.o -c -std=c++11 -DPLATFORMIO=60119 -Iinclude -Isrc src\\main.cpp",
+        "directory": "D:\\workspace\\MBTI_Parallel",
+        "file": "src\\main.cpp",
+        "output": ".pio\\build\\native\\src\\main.o"
+    }
+]
