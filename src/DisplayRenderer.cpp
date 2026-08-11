@@ -45,17 +45,23 @@ void renderUI(const UIContext& ctx) {
             
             // 放大中央科技感六边形图案
             RadarData homeData = { 75.0f, 90.0f, 60.0f, 85.0f, 40.0f, 70.0f };
-            drawRadarChart(canvas, 120, 52, 35, homeData, GREEN, DARKCYAN, false);
+            drawRadarChart(canvas, 120, 50, 35, homeData, GREEN, DARKCYAN, false);
 
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(2);
-            canvas.setCursor(72, 92);
+            canvas.setCursor(72, 90);
             canvas.print("PARALLEL");
 
             canvas.setTextColor(CYAN, BLACK);
             canvas.setTextSize(1);
-            canvas.setCursor(62, 113);
+            canvas.setCursor(62, 111);
             canvas.print("PRESS ENTER TO START");
+
+            if (ctx.totalPlays > 0) {
+                canvas.setTextColor(DARKGREY, BLACK);
+                canvas.setCursor(185, 5);
+                canvas.printf("PLS:%d", ctx.totalPlays);
+            }
             break;
         }
 
@@ -73,7 +79,7 @@ void renderUI(const UIContext& ctx) {
 
             drawHeader(title);
 
-            // 2D 网格排列（充分利用 240px 屏幕宽度，支持上下左右 4 方向选择）
+            // 2D 网格排列
             int count = 0;
             const char* items[8];
             const char* icons[] = { "◇", "○", "△", "□", "☆", "⬡" };
@@ -135,15 +141,23 @@ void renderUI(const UIContext& ctx) {
         case AppState::BUILDER_PREVIEW: {
             drawHeader("SCENARIO PREVIEW");
             canvas.setTextSize(1);
+            canvas.setTextColor(YELLOW, BLACK);
+            canvas.setCursor(6, 28);
+            canvas.print(ctx.currentScenarioTitle ? ctx.currentScenarioTitle : "SCENARIO");
+
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(6, 32);
-            canvas.printf("Type    : %s\n", getDecisionTypeName(ctx.currentSelection.decisionType));
-            canvas.setCursor(6, 48);
-            canvas.printf("Motiv   : %s\n", getMotivationName(ctx.currentSelection.motivation));
-            canvas.setCursor(6, 64);
-            canvas.printf("Concern : %s (%s)\n", getConcernName(ctx.currentSelection.concern), getIntensityName(ctx.currentSelection.intensity));
-            canvas.setCursor(6, 80);
-            canvas.printf("Priority: %s\n", getPriorityName(ctx.currentSelection.priority));
+            canvas.setCursor(6, 44);
+            // 自动折行打印场景描述
+            const char* desc = ctx.currentScenarioDesc ? ctx.currentScenarioDesc : "";
+            int lineY = 44;
+            while (*desc && lineY <= 90) {
+                char buf[20] = {0};
+                strncpy(buf, desc, 18);
+                canvas.setCursor(6, lineY);
+                canvas.print(buf);
+                desc += strlen(buf);
+                lineY += 14;
+            }
 
             // 右侧抽象预览雷达图
             RadarData prevData = {
@@ -156,7 +170,7 @@ void renderUI(const UIContext& ctx) {
             };
             drawRadarChart(canvas, 182, 65, 32, prevData, CYAN, DARKCYAN, false);
 
-            drawFooter("[ENTER] SIMULATE  [ESC] BACK");
+            drawFooter("[ENTER] SIMULATE  [ESC] HOME");
             break;
         }
 
@@ -240,12 +254,10 @@ void renderUI(const UIContext& ctx) {
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle);
 
-            // 右侧区域(centerX = 180, centerY = 68, radius = 35):
-            // 使用补间插值算法实时计算出来的 ctx.currentRadar 绘制！实现极具视觉冲击力的平滑形变效果！
+            // 右侧区域(centerX = 180, centerY = 68, radius = 35)
             drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, CYAN, DARKCYAN, true);
 
-            // 左侧区域 (X限制在 6 ~ 125 以内，完全不与右侧雷达图重叠)
-            // 1. Choice 行
+            // 左侧区域
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(6, 28);
@@ -261,13 +273,11 @@ void renderUI(const UIContext& ctx) {
             }
             canvas.print(getDecisionName(res.decision));
 
-            // 2. Score 行
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(6, 50);
             canvas.printf("Score : %.1f", res.score);
 
-            // 3. Reason 标题与两行切割
             canvas.setCursor(6, 66);
             canvas.setTextColor(CYAN, BLACK);
             canvas.print("Reason:");
@@ -324,16 +334,30 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::YOUR_MATCH: {
-            drawHeader("YOUR DECISION PROFILE");
+            drawHeader("DECISION PROFILE");
             
-            // 左侧使用补间插值后的 ctx.currentRadar 绘制
+            // 左侧绘制用户决策轮廓雷达图
             drawRadarChart(canvas, 62, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true);
 
-            // 右侧区域 (X = 128 ~ 235)
+            // 右侧区域 (X = 128 ~ 235) 根据 MatchType 打印趣味反馈文案！
             canvas.setTextSize(1);
-            canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(128, 32);
-            canvas.print("CLOSEST MATCH:");
+            if (ctx.matchType == MatchType::OUTLIER) {
+                canvas.setTextColor(RED, BLACK);
+                canvas.setCursor(128, 32);
+                canvas.print("THE OUTLIER!");
+            } else if (ctx.matchType == MatchType::MAJORITY) {
+                canvas.setTextColor(CYAN, BLACK);
+                canvas.setCursor(128, 32);
+                canvas.print("MAJORITY MATCH:");
+            } else if (ctx.matchType == MatchType::SPLIT) {
+                canvas.setTextColor(YELLOW, BLACK);
+                canvas.setCursor(128, 32);
+                canvas.print("NO CONSENSUS!");
+            } else {
+                canvas.setTextColor(WHITE, BLACK);
+                canvas.setCursor(128, 32);
+                canvas.print("CLOSEST MATCH:");
+            }
 
             canvas.setTextSize(2);
             canvas.setTextColor(YELLOW, BLACK);
@@ -349,7 +373,13 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(128, 88);
             canvas.printf("Choice: %s", getDecisionName(ctx.userChoice));
 
-            drawFooter("[ENTER] BACK TO HOME");
+            if (ctx.totalPlays > 0) {
+                canvas.setTextColor(DARKGREY, BLACK);
+                canvas.setCursor(185, 5);
+                canvas.printf("PLS:%d", ctx.totalPlays);
+            }
+
+            drawFooter("[ENTER] NEXT AGAIN  [ESC] HOME");
             break;
         }
     }

@@ -2,6 +2,7 @@
 #include "ScenarioMapper.h"
 #include "DisplayRenderer.h"
 #include "DecisionProfile.h"
+#include "ScenarioPool.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -26,6 +27,35 @@ static void startRadarAnimation(UIContext& ctx, const RadarData& targetData, uin
     ctx.isRadarAnimActive = true;
 }
 
+static MatchType determineMatchType(const UIContext& ctx) {
+    int sameChoiceCount = 0;
+    for (int i = 0; i < MBTI_COUNT; ++i) {
+        if (ctx.results[i].decision == ctx.userChoice) {
+            sameChoiceCount++;
+        }
+    }
+    if (sameChoiceCount == 0) {
+        return MatchType::OUTLIER;
+    } else if (sameChoiceCount >= 10) {
+        return MatchType::MAJORITY;
+    } else if (ctx.summary.yesCount >= 6 && ctx.summary.noCount >= 6) {
+        return MatchType::SPLIT;
+    }
+    return MatchType::MATCH;
+}
+
+static void triggerRandomScenario(UIContext& ctx) {
+    const ScenarioTemplate& tmpl = getRandomScenario(ctx.recentScenarioIds);
+    ctx.currentScenario = tmpl.scenario;
+    ctx.currentScenarioTitle = tmpl.title;
+    ctx.currentScenarioDesc = tmpl.description;
+
+    // 压入最近 3 次防重复队列
+    ctx.recentScenarioIds[2] = ctx.recentScenarioIds[1];
+    ctx.recentScenarioIds[1] = ctx.recentScenarioIds[0];
+    ctx.recentScenarioIds[0] = tmpl.id;
+}
+
 void initApp(UIContext& ctx) {
     ctx.state = AppState::HOME;
     ctx.selectedMenuIndex = 0;
@@ -33,6 +63,11 @@ void initApp(UIContext& ctx) {
     ctx.userChoice = Decision::YES;
     ctx.animStartTime = 0;
     ctx.animProgress = 0;
+    ctx.totalPlays = 0;
+
+    ctx.recentScenarioIds[0] = -1;
+    ctx.recentScenarioIds[1] = -1;
+    ctx.recentScenarioIds[2] = -1;
 
     // 雷达插值变量初始化
     ctx.isRadarAnimActive = false;
@@ -48,9 +83,13 @@ void initApp(UIContext& ctx) {
     ctx.currentSelection.intensity = Intensity::MEDIUM;
     ctx.currentSelection.priority = Priority::EXPERIENCE;
 
+    ctx.currentScenarioTitle = "CUSTOM SCENARIO";
+    ctx.currentScenarioDesc = "User-constructed decision scenario.";
     ctx.currentScenario = buildScenario(ctx.currentSelection);
+
     ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
     ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
+    ctx.matchType = MatchType::MATCH;
 }
 
 void updateApp(UIContext& ctx, uint32_t currentMillis) {
@@ -101,8 +140,9 @@ void handleInput(UIContext& ctx, KeyInput key) {
     switch (ctx.state) {
         case AppState::HOME:
             if (key == KeyInput::ENTER) {
-                ctx.state = AppState::BUILDER_TYPE;
-                ctx.selectedMenuIndex = 0;
+                // 默认从 20 个防重复场景库中随机抽取一个开局！
+                triggerRandomScenario(ctx);
+                ctx.state = AppState::BUILDER_PREVIEW;
             }
             break;
 
@@ -215,6 +255,8 @@ void handleInput(UIContext& ctx, KeyInput key) {
             } else if (key == KeyInput::ENTER) {
                 Priority p[] = { Priority::EXPERIENCE, Priority::PRACTICAL, Priority::PEOPLE, Priority::SAFETY };
                 ctx.currentSelection.priority = p[idx];
+                ctx.currentScenarioTitle = "CUSTOM SCENARIO";
+                ctx.currentScenarioDesc = "User-constructed decision scenario.";
                 ctx.currentScenario = buildScenario(ctx.currentSelection);
                 ctx.state = AppState::BUILDER_PREVIEW;
                 return;
@@ -233,7 +275,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 ctx.animStartTime = 0;
                 ctx.animProgress = 0;
             } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::BUILDER_PRIORITY;
+                ctx.state = AppState::HOME;
                 ctx.selectedMenuIndex = 0;
             }
             break;
@@ -291,9 +333,10 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 Decision choices[] = { Decision::YES, Decision::NO, Decision::MAYBE };
                 ctx.userChoice = choices[ctx.selectedMenuIndex];
 
-                // 计算用户的决策轮廓并匹配相近度最高的人格
+                // 计算用户的决策轮廓与相近度最高的人格
                 ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
                 ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
+                ctx.matchType = determineMatchType(ctx);
 
                 // 启动用户 Profile 雷达图的过渡呈现
                 RadarData target = {
@@ -314,6 +357,11 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
         case AppState::YOUR_MATCH:
             if (key == KeyInput::ENTER) {
+                // 【Quick Play 畅玩无限闭环】递增总次数，自动防重复抽取下一个新场景！
+                ctx.totalPlays++;
+                triggerRandomScenario(ctx);
+                ctx.state = AppState::BUILDER_PREVIEW;
+            } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::HOME;
                 ctx.selectedMenuIndex = 0;
             }

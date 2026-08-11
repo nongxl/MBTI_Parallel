@@ -35,11 +35,20 @@ enum class KeyInput {
     BACK
 };
 
+enum class MatchType {
+    MATCH,
+    OUTLIER,
+    MAJORITY,
+    SPLIT
+};
+
 struct UIContext {
     AppState state;
     UserSelection currentSelection;
     Scenario currentScenario;
-    
+    const char* currentScenarioTitle;
+    const char* currentScenarioDesc;
+
     DecisionResult results[MBTI_COUNT];
     DecisionSummary summary;
     MBTIType splitYesType;
@@ -52,6 +61,11 @@ struct UIContext {
     DecisionProfile userProfile;
     MBTIType closestMBTI;
     float matchSimilarity;
+    MatchType matchType;
+
+    // 畅玩闭环与防重复
+    int recentScenarioIds[3];
+    int totalPlays;
 
     uint32_t animStartTime;
     uint32_t animProgress; // 0 ~ 100
