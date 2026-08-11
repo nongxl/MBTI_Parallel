@@ -182,25 +182,25 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::MY_PROFILE: {
-            // 真实长效 MBTI 人格画像看板
-            drawHeader(isCN ? "长效真实人格画像" : "LONG-TERM MBTI PROFILE", isCN);
+            // 【规范要求：左侧显示文字统计，右侧显示六边形雷达图】
+            drawHeader(isCN ? "真实长效 MBTI 画板" : "MY LONG-TERM PROFILE", isCN);
 
-            // 左侧绘制 NVS 累积极坐标发光雷达图 (centerX = 62, centerY = 68, radius = 35)
-            drawRadarChart(canvas, 62, 68, 35, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
+            // 右侧绘制 NVS 累积极坐标发光雷达图 (centerX = 180, centerY = 68, radius = 35)
+            drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
+            // 左侧信息区域 (X = 6 ~ 124)
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
-            // 右侧信息面板
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(120, 28);
-            canvas.print(isCN ? "收敛人格:" : "LONG-TERM:");
+            canvas.setCursor(6, 28);
+            canvas.print(isCN ? "收敛真实人格:" : "LONG-TERM MBTI:");
 
             canvas.setFont(&fonts::Font0);
             canvas.setTextSize(2);
             canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(120, 42);
+            canvas.setCursor(6, 43);
             canvas.print(getMBTIName(ctx.userHistory.dominantMBTI));
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -208,19 +208,52 @@ void renderUI(const UIContext& ctx) {
 
             canvas.setTextSize(1);
             canvas.setTextColor(CYAN, BLACK);
-            canvas.setCursor(120, 62);
-            canvas.printf(isCN ? "置信度: %.1f%%" : "Confid: %.1f%%", ctx.userHistory.dominantSimilarity);
+            canvas.setCursor(6, 64);
+            canvas.printf(isCN ? "置信度: %.1f%%" : "Confid : %.1f%%", ctx.userHistory.dominantSimilarity);
 
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(120, 78);
-            canvas.printf(isCN ? "测试场数: %d 场" : "Tested : %d", ctx.userHistory.totalPlays);
+            canvas.setCursor(6, 80);
+            canvas.printf(isCN ? "已测场数: %d 场" : "Tested : %d", ctx.userHistory.totalPlays);
 
             canvas.setTextColor(LIGHTGREY, BLACK);
-            canvas.setCursor(120, 94);
+            canvas.setCursor(6, 96);
             canvas.printf(isCN ? "同意%d 拒绝%d 犹豫%d" : "Y:%d N:%d M:%d",
                           ctx.userHistory.yesCount, ctx.userHistory.noCount, ctx.userHistory.maybeCount);
 
-            drawFooter(isCN ? "[ENTER/ESC] 返回主菜单" : "[ENTER/ESC] Back", isCN);
+            drawFooter(isCN ? "[ENTER/ESC] 返回  [上下] 清空" : "[ENTER/ESC] Back  [UP/DN] Clear", isCN);
+            break;
+        }
+
+        case AppState::MY_PROFILE_CLEAR_CONFIRM: {
+            // 清空历史二次确认警告弹窗
+            drawHeader(isCN ? "⚠️ 清空历史确认" : "⚠️ CLEAR HISTORY", isCN);
+
+            if (isCN) canvas.setFont(&fonts::efontCN_12);
+            else canvas.setFont(&fonts::Font0);
+
+            canvas.setTextSize(1);
+            canvas.setTextColor(RED, BLACK);
+            canvas.setCursor(10, 32);
+            canvas.print(isCN ? "确定擦除所有决策历史与真实人格吗？" : "Clear all decision history & profile?");
+
+            // 二级选项 1. 清空 / 2. 取消
+            if (ctx.selectedMenuIndex == 0) {
+                canvas.setTextColor(RED, BLACK);
+                canvas.setCursor(20, 60);
+                canvas.print(isCN ? "> [ 1. ⚠️ 清空历史 (CLEAR) ]" : "> [ 1. CLEAR ALL HISTORY ]");
+                canvas.setTextColor(WHITE, BLACK);
+                canvas.setCursor(20, 88);
+                canvas.print(isCN ? "  [ 2. 🛡️ 取消保留 (CANCEL) ]" : "  [ 2. CANCEL ]");
+            } else {
+                canvas.setTextColor(WHITE, BLACK);
+                canvas.setCursor(20, 60);
+                canvas.print(isCN ? "  [ 1. ⚠️ 清空历史 (CLEAR) ]" : "  [ 1. CLEAR ALL HISTORY ]");
+                canvas.setTextColor(GREEN, BLACK);
+                canvas.setCursor(20, 88);
+                canvas.print(isCN ? "> [ 2. 🛡️ 取消保留 (CANCEL) ]" : "> [ 2. CANCEL ]");
+            }
+
+            drawFooter(isCN ? "[方向] 选择  [ENTER] 确认执行" : "[ARR] Select  [ENTER] Confirm", isCN);
             break;
         }
 

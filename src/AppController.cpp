@@ -243,13 +243,56 @@ void handleInput(UIContext& ctx, KeyInput key) {
                     };
                     startRadarAnimation(ctx, target, now);
                     ctx.state = AppState::MY_PROFILE;
+                    ctx.selectedMenuIndex = 0;
                 }
             }
             break;
 
         case AppState::MY_PROFILE:
-            if (key == KeyInput::ENTER || key == KeyInput::BACK) {
+            if (key == KeyInput::ENTER) {
                 ctx.state = AppState::HOME;
+                ctx.selectedMenuIndex = 0;
+            } else if (key == KeyInput::BACK) {
+                ctx.state = AppState::HOME;
+                ctx.selectedMenuIndex = 0;
+            } else if (key == KeyInput::UP || key == KeyInput::DOWN) {
+                // 按上下方向键触发清空弹窗二次确认
+                ctx.state = AppState::MY_PROFILE_CLEAR_CONFIRM;
+                ctx.selectedMenuIndex = 1; // 默认选中 1 (取消)
+            }
+            break;
+
+        case AppState::MY_PROFILE_CLEAR_CONFIRM:
+            if (key == KeyInput::LEFT || key == KeyInput::UP) {
+                ctx.selectedMenuIndex = 0; // 1. 清空 (CLEAR)
+            } else if (key == KeyInput::RIGHT || key == KeyInput::DOWN) {
+                ctx.selectedMenuIndex = 1; // 2. 取消 (CANCEL)
+            } else if (key == KeyInput::ENTER) {
+                if (ctx.selectedMenuIndex == 0) {
+                    // 确认清空: 重置内存与擦除 ESP32 NVS Flash 历史
+                    ctx.userHistory.totalPlays = 0;
+                    ctx.userHistory.yesCount = 0;
+                    ctx.userHistory.noCount = 0;
+                    ctx.userHistory.maybeCount = 0;
+                    ctx.userHistory.cumulativeRisk = 50.0f;
+                    ctx.userHistory.cumulativeNovelty = 50.0f;
+                    ctx.userHistory.cumulativeLogic = 50.0f;
+                    ctx.userHistory.cumulativeSocial = 50.0f;
+                    ctx.userHistory.cumulativePlanning = 50.0f;
+                    ctx.userHistory.cumulativePracticality = 50.0f;
+                    ctx.userHistory.dominantMBTI = MBTIType::INTP;
+                    ctx.userHistory.dominantSimilarity = 0.0f;
+
+                    saveUserHistoryToNVS(ctx.userHistory);
+                    ctx.totalPlays = 0;
+                    ctx.state = AppState::HOME;
+                    ctx.selectedMenuIndex = 0;
+                } else {
+                    ctx.state = AppState::MY_PROFILE;
+                    ctx.selectedMenuIndex = 0;
+                }
+            } else if (key == KeyInput::BACK) {
+                ctx.state = AppState::MY_PROFILE;
                 ctx.selectedMenuIndex = 0;
             }
             break;

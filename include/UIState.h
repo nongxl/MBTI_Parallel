@@ -11,13 +11,14 @@
 #include "ScenarioGenerator.h"
 
 enum class AppState {
-    LANGUAGE_SELECT,    // 首次开机语言选择屏
+    LANGUAGE_SELECT,            // 首次开机语言选择屏
     HOME,
-    MY_PROFILE,         // 真实长效 MBTI 人格画像看板
-    BUILDER_WHO,        // Step 1: WHO
-    BUILDER_SITUATION,  // Step 2: SITUATION
-    BUILDER_CONDITION,  // Step 3: CONDITION
-    BUILDER_TENSION,    // Step 4: TENSION
+    MY_PROFILE,                 // 真实长效 MBTI 人格画像看板
+    MY_PROFILE_CLEAR_CONFIRM,   // 清空历史确认二次弹窗屏
+    BUILDER_WHO,                // Step 1: WHO
+    BUILDER_SITUATION,          // Step 2: SITUATION
+    BUILDER_CONDITION,          // Step 3: CONDITION
+    BUILDER_TENSION,            // Step 4: TENSION
     BUILDER_PREVIEW,
     SIMULATING,
     SUMMARY,
