@@ -10,39 +10,36 @@ enum class Decision {
     MAYBE
 };
 
-constexpr float YES_THRESHOLD = 65.0f;
-constexpr float NO_THRESHOLD = 35.0f;
-
 struct DecisionResult {
     MBTIType personality;
     Decision decision;
-    float score;        // 0 ~ 100
-    float confidence;   // 0 ~ 50
-    char reason[64];    // <= 60 字符的简短解释
+    float score; // 0 ~ 100 综合决策倾向分
+    const char* reason;
 };
 
 struct DecisionSummary {
     int yesCount;
     int noCount;
     int maybeCount;
-
-    MBTIType strongestYes;
-    MBTIType strongestNo;
 };
 
-// 单个人格决策模拟
-DecisionResult simulate(const Scenario& scenario, MBTIType personality);
+// 计算单个 MBTI 对 Scenario 的决策
+DecisionResult evaluateDecision(const PersonalityProfile& profile, const Scenario& scenario);
 
-// 批量模拟 16 人格
-void simulateAll(const Scenario& scenario, DecisionResult results[MBTI_COUNT]);
+// 模拟所有 16 种 MBTI
+void simulateAll(const Scenario& scenario, DecisionResult outResults[MBTI_COUNT]);
 
-// 汇总统计模拟结果
+// 汇总统计结果
 DecisionSummary summarizeResults(const DecisionResult results[MBTI_COUNT]);
 
-// 寻找最大分歧人格 (Highest Score vs Lowest Score)
+// 寻找分歧最大的性格对比 (产生相反决策的最典型两极 MBTI)
 void findBiggestSplit(const DecisionResult results[MBTI_COUNT], MBTIType& yesType, MBTIType& noType);
 
-// 辅助方法：决策枚举转字符串
+// 获取 Decision 的英文/中文文本名称
 const char* getDecisionName(Decision decision);
+const char* getDecisionNameCN(Decision decision);
+
+// 获取 Decision 依据理由的中文翻译
+const char* getDecisionReasonCN(const char* reasonEN);
 
 #endif // DECISION_ENGINE_H

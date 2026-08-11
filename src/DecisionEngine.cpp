@@ -1,173 +1,128 @@
 #include "DecisionEngine.h"
 #include <cmath>
-#include <cstdio>
+#include <algorithm>
 #include <cstring>
+
+static float clampValue(float val, float minV = 0.0f, float maxV = 100.0f) {
+    return std::max(minV, std::min(maxV, val));
+}
+
+DecisionResult evaluateDecision(const PersonalityProfile& profile, const Scenario& scenario) {
+    DecisionResult res;
+    res.personality = profile.type;
+
+    // 六维综合权重加权算法
+    float score = 50.0f; // 基准中立分
+
+    score += (profile.risk - 50.0f) * (scenario.risk / 100.0f) * 0.25f;
+    score += (profile.novelty - 50.0f) * (scenario.novelty / 100.0f) * 0.25f;
+    score += (profile.social - 50.0f) * (scenario.social / 100.0f) * 0.20f;
+    score += (profile.logic - 50.0f) * (scenario.practicalValue / 100.0f) * 0.15f;
+    score -= (profile.planning - 50.0f) * (scenario.uncertainty / 100.0f) * 0.20f;
+    score += (profile.practicality - 50.0f) * (scenario.practicalValue / 100.0f) * 0.15f;
+
+    res.score = clampValue(score);
+
+    // 确定 Decision 结果与决策依据
+    if (res.score >= 58.0f) {
+        res.decision = Decision::YES;
+        if (profile.novelty >= 75.0f && scenario.novelty >= 50.0f) {
+            res.reason = "NOVELTY SEEKING INSTINCT";
+        } else if (profile.risk >= 70.0f && scenario.risk >= 50.0f) {
+            res.reason = "HIGH RISK ACCEPTANCE";
+        } else if (profile.social >= 70.0f && scenario.social >= 50.0f) {
+            res.reason = "SOCIAL INVOLVEMENT PREFERENCE";
+        } else if (profile.logic >= 70.0f) {
+            res.reason = "ANALYTICAL LOGIC MATCH";
+        } else {
+            res.reason = "POSITIVE VALUE ALIGNMENT";
+        }
+    } else if (res.score <= 42.0f) {
+        res.decision = Decision::NO;
+        if (profile.planning >= 70.0f && scenario.uncertainty >= 40.0f) {
+            res.reason = "STRUCTURED PLANNING NEEDED";
+        } else if (profile.risk <= 35.0f && scenario.risk >= 50.0f) {
+            res.reason = "CAUTIOUS RISK AVOIDANCE";
+        } else if (profile.social <= 35.0f && scenario.social >= 60.0f) {
+            res.reason = "SOLITUDE & FREEDOM PREFERRED";
+        } else {
+            res.reason = "STABILITY & SAFETY FIRST";
+        }
+    } else {
+        res.decision = Decision::MAYBE;
+        res.reason = "BALANCED WEIGHING OPTION";
+    }
+
+    return res;
+}
+
+void simulateAll(const Scenario& scenario, DecisionResult outResults[MBTI_COUNT]) {
+    for (int i = 0; i < MBTI_COUNT; ++i) {
+        const PersonalityProfile& prof = getMBTIProfile(static_cast<MBTIType>(i));
+        outResults[i] = evaluateDecision(prof, scenario);
+    }
+}
+
+DecisionSummary summarizeResults(const DecisionResult results[MBTI_COUNT]) {
+    DecisionSummary summary = {0, 0, 0};
+    for (int i = 0; i < MBTI_COUNT; ++i) {
+        if (results[i].decision == Decision::YES) summary.yesCount++;
+        else if (results[i].decision == Decision::NO) summary.noCount++;
+        else summary.maybeCount++;
+    }
+    return summary;
+}
+
+void findBiggestSplit(const DecisionResult results[MBTI_COUNT], MBTIType& yesType, MBTIType& noType) {
+    float maxYesScore = -1.0f;
+    float minNoScore = 999.0f;
+    yesType = MBTIType::ENTP;
+    noType = MBTIType::ISTJ;
+
+    for (int i = 0; i < MBTI_COUNT; ++i) {
+        if (results[i].decision == Decision::YES && results[i].score > maxYesScore) {
+            maxYesScore = results[i].score;
+            yesType = results[i].personality;
+        }
+        if (results[i].decision == Decision::NO && results[i].score < minNoScore) {
+            minNoScore = results[i].score;
+            noType = results[i].personality;
+        }
+    }
+}
 
 const char* getDecisionName(Decision decision) {
     switch (decision) {
         case Decision::YES: return "YES";
         case Decision::NO: return "NO";
         case Decision::MAYBE: return "MAYBE";
-        default: return "UNKNOWN";
     }
+    return "UNKNOWN";
 }
 
-DecisionResult simulate(const Scenario& scenario, MBTIType personality) {
-    const PersonalityProfile& profile = getMBTIProfile(personality);
-
-    // 1. 风险与不确定性拉锯计算
-    float scenarioRiskTotal = scenario.risk * 0.6f + scenario.uncertainty * 0.4f;
-    float profileRiskTolerance = profile.risk * 0.6f + (100.0f - profile.planning) * 0.4f;
-    float deltaRisk = (profileRiskTolerance - scenarioRiskTotal) * 0.35f;
-
-    // 2. 新奇/已知偏好计算
-    float deltaNovelty = 0.0f;
-    if (scenario.novelty > 50.0f) {
-        deltaNovelty = (profile.novelty - 50.0f) * (scenario.novelty / 100.0f) * 0.30f;
-    } else {
-        deltaNovelty = (50.0f - profile.novelty) * ((100.0f - scenario.novelty) / 100.0f) * 0.25f;
+const char* getDecisionNameCN(Decision decision) {
+    switch (decision) {
+        case Decision::YES: return "同意";
+        case Decision::NO: return "拒绝";
+        case Decision::MAYBE: return "犹豫";
     }
-
-    // 3. 社交与情感因素计算
-    float profileEmotion = 100.0f - profile.logic;
-    float deltaSocial = (profile.social - 50.0f) * (scenario.social / 100.0f) * 0.25f;
-    float deltaEmotion = (profileEmotion - 50.0f) * (scenario.emotionalValue / 100.0f) * 0.25f;
-    float deltaSocialEmotion = deltaSocial + deltaEmotion;
-
-    // 4. 实用收益与代价阻力计算
-    float profilePractical = profile.practicality * 0.6f + profile.logic * 0.4f;
-    float deltaPracticalGain = (profilePractical - 50.0f) * (scenario.practicalValue / 100.0f) * 0.30f;
-    
-    float scenarioBurden = scenario.cost * 0.4f + scenario.effort * 0.4f + scenario.time * 0.2f;
-    float deltaBurdenPenalty = 0.0f;
-    if (scenarioBurden > 30.0f) {
-        deltaBurdenPenalty = -1.0f * (profilePractical / 100.0f) * (scenarioBurden - 30.0f) * 0.25f;
-    }
-    float deltaPracticalCost = deltaPracticalGain + deltaBurdenPenalty;
-
-    // 5. 汇总计算得分
-    float totalScore = 50.0f + deltaRisk + deltaNovelty + deltaSocialEmotion + deltaPracticalCost;
-
-    // Clamp 到 [0, 100]
-    if (totalScore > 100.0f) totalScore = 100.0f;
-    if (totalScore < 0.0f) totalScore = 0.0f;
-
-    // 判断 Decision 与 Confidence
-    Decision decision = Decision::MAYBE;
-    if (totalScore >= YES_THRESHOLD) {
-        decision = Decision::YES;
-    } else if (totalScore <= NO_THRESHOLD) {
-        decision = Decision::NO;
-    }
-
-    float confidence = std::abs(totalScore - 50.0f);
-
-    // 6. 简短 Template-based Reason 生成
-    // 找出影响最显著的偏好方向
-    const char* riskPosStr = "Accepts risk & uncertainty";
-    const char* riskNegStr = "Prefers safety & certainty";
-    const char* novPosStr  = "Drawn to novel ideas";
-    const char* novNegStr  = "Prefers routine & familiarity";
-    const char* socPosStr  = "Values social & emotional gain";
-    const char* socNegStr  = "Low social/emotional interest";
-    const char* prcPosStr  = "High practical benefit";
-    const char* prcNegStr  = "Cost/effort exceeds practical value";
-
-    const char* primaryReason = nullptr;
-    const char* secondaryReason = nullptr;
-
-    // 判断主导因子
-    float absRisk = std::abs(deltaRisk);
-    float absNov = std::abs(deltaNovelty);
-    float absSoc = std::abs(deltaSocialEmotion);
-    float absPrc = std::abs(deltaPracticalCost);
-
-    // 查找最大和第二大因子
-    float firstMax = -1.0f;
-    float secondMax = -1.0f;
-
-    auto checkFactor = [&](float val, const char* pos, const char* neg) {
-        float absVal = std::abs(val);
-        const char* str = (val >= 0.0f) ? pos : neg;
-        if (absVal > firstMax) {
-            secondMax = firstMax;
-            secondaryReason = primaryReason;
-            firstMax = absVal;
-            primaryReason = str;
-        } else if (absVal > secondMax) {
-            secondMax = absVal;
-            secondaryReason = str;
-        }
-    };
-
-    checkFactor(deltaRisk, riskPosStr, riskNegStr);
-    checkFactor(deltaNovelty, novPosStr, novNegStr);
-    checkFactor(deltaSocialEmotion, socPosStr, socNegStr);
-    checkFactor(deltaPracticalCost, prcPosStr, prcNegStr);
-
-    DecisionResult result;
-    result.personality = personality;
-    result.decision = decision;
-    result.score = totalScore;
-    result.confidence = confidence;
-
-    if (primaryReason && secondaryReason && secondMax >= 5.0f) {
-        snprintf(result.reason, sizeof(result.reason), "%s; %s", primaryReason, secondaryReason);
-    } else if (primaryReason) {
-        snprintf(result.reason, sizeof(result.reason), "%s", primaryReason);
-    } else {
-        snprintf(result.reason, sizeof(result.reason), "Balanced factors");
-    }
-
-    // 确保长度 <= 60 字符
-    result.reason[63] = '\0';
-
-    return result;
+    return "未知";
 }
 
-void simulateAll(const Scenario& scenario, DecisionResult results[MBTI_COUNT]) {
-    for (int i = 0; i < MBTI_COUNT; ++i) {
-        MBTIType type = static_cast<MBTIType>(i);
-        results[i] = simulate(scenario, type);
-    }
-}
+const char* getDecisionReasonCN(const char* reasonEN) {
+    if (!reasonEN) return "综合价值对齐";
 
-DecisionSummary summarizeResults(const DecisionResult results[MBTI_COUNT]) {
-    DecisionSummary summary;
-    summary.yesCount = 0;
-    summary.noCount = 0;
-    summary.maybeCount = 0;
+    if (strstr(reasonEN, "NOVELTY SEEKING")) return "极度渴望新奇体验";
+    if (strstr(reasonEN, "HIGH RISK ACCEPTANCE")) return "高度偏好高风险尝试";
+    if (strstr(reasonEN, "SOCIAL INVOLVEMENT")) return "追求积极社交参与";
+    if (strstr(reasonEN, "ANALYTICAL LOGIC")) return "符合严密理性分析";
+    if (strstr(reasonEN, "POSITIVE VALUE")) return "符合积极价值倾向";
+    if (strstr(reasonEN, "STRUCTURED PLANNING")) return "依赖清晰计划保障";
+    if (strstr(reasonEN, "CAUTIOUS RISK AVOIDANCE")) return "倾向规避未知风险";
+    if (strstr(reasonEN, "SOLITUDE & FREEDOM")) return "偏好独立自由空间";
+    if (strstr(reasonEN, "STABILITY & SAFETY")) return "安全稳定第一要务";
+    if (strstr(reasonEN, "BALANCED WEIGHING")) return "权衡利弊犹豫不决";
+    if (strstr(reasonEN, "PRACTICAL VALUE")) return "优先考虑现实实用价值";
 
-    float highestScore = -1.0f;
-    float lowestScore = 101.0f;
-    summary.strongestYes = MBTIType::ISTJ;
-    summary.strongestNo = MBTIType::ISTJ;
-
-    for (int i = 0; i < MBTI_COUNT; ++i) {
-        if (results[i].decision == Decision::YES) {
-            summary.yesCount++;
-        } else if (results[i].decision == Decision::NO) {
-            summary.noCount++;
-        } else {
-            summary.maybeCount++;
-        }
-
-        if (results[i].score > highestScore) {
-            highestScore = results[i].score;
-            summary.strongestYes = results[i].personality;
-        }
-
-        if (results[i].score < lowestScore) {
-            lowestScore = results[i].score;
-            summary.strongestNo = results[i].personality;
-        }
-    }
-
-    return summary;
-}
-
-void findBiggestSplit(const DecisionResult results[MBTI_COUNT], MBTIType& yesType, MBTIType& noType) {
-    DecisionSummary summary = summarizeResults(results);
-    yesType = summary.strongestYes;
-    noType = summary.strongestNo;
+    return "综合权衡个人偏好";
 }

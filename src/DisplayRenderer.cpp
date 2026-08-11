@@ -83,7 +83,7 @@ void renderUI(const UIContext& ctx) {
             };
 
             // 绘制大幅放大的科技感主六边形图 (centerX = 120, centerY = 46, radius = 48)
-            drawRadarChart(canvas, 120, 46, 48, homeData, GREEN, DARKCYAN, false);
+            drawRadarChart(canvas, 120, 46, 48, homeData, GREEN, DARKCYAN, false, isCN);
 
             // 标题文字 PARALLEL
             canvas.setFont(&fonts::Font0);
@@ -245,7 +245,7 @@ void renderUI(const UIContext& ctx) {
                 100.0f - ctx.currentScenario.uncertainty,
                 ctx.currentScenario.practicalValue
             };
-            drawRadarChart(canvas, 182, 65, 32, prevData, CYAN, DARKCYAN, false);
+            drawRadarChart(canvas, 182, 65, 32, prevData, CYAN, DARKCYAN, false, isCN);
 
             drawFooter(isCN ? "[ENTER] 开始模拟  [ESC] 首页" : "[ENTER] SIMULATE  [ESC] HOME", isCN);
             break;
@@ -317,7 +317,7 @@ void renderUI(const UIContext& ctx) {
             
             const PersonalityProfile& yesProf = getMBTIProfile(ctx.splitYesType);
             RadarData yesData = { yesProf.risk, yesProf.novelty, yesProf.logic, yesProf.social, yesProf.planning, yesProf.practicality };
-            drawRadarChart(canvas, 55, 62, 28, yesData, GREEN, DARKCYAN, false);
+            drawRadarChart(canvas, 55, 62, 28, yesData, GREEN, DARKCYAN, false, isCN);
 
             canvas.setFont(&fonts::Font0);
             canvas.setTextSize(2);
@@ -333,7 +333,7 @@ void renderUI(const UIContext& ctx) {
             // 右边：NO 侧 MBTI 雷达图
             const PersonalityProfile& noProf = getMBTIProfile(ctx.splitNoType);
             RadarData noData = { noProf.risk, noProf.novelty, noProf.logic, noProf.social, noProf.planning, noProf.practicality };
-            drawRadarChart(canvas, 185, 62, 28, noData, RED, DARKCYAN, false);
+            drawRadarChart(canvas, 185, 62, 28, noData, RED, DARKCYAN, false, isCN);
 
             canvas.setTextColor(RED, BLACK);
             canvas.setCursor(145, 101);
@@ -349,8 +349,8 @@ void renderUI(const UIContext& ctx) {
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle, isCN);
 
-            // 右侧区域(centerX = 180, centerY = 68, radius = 35)
-            drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, CYAN, DARKCYAN, true);
+            // 右侧区域(centerX = 180, centerY = 68, radius = 35) 带防越界卡死保护与双语轴标签
+            drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, CYAN, DARKCYAN, true, isCN);
 
             // 左侧区域
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -361,8 +361,13 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 28);
             canvas.print(isCN ? "选择: " : "Choice: ");
 
-            canvas.setFont(&fonts::Font0);
-            canvas.setTextSize(2);
+            // 决策结果 YES / NO / MAYBE 中英文翻译
+            const char* decName = isCN ? getDecisionNameCN(res.decision) : getDecisionName(res.decision);
+
+            if (isCN) canvas.setFont(&fonts::efontCN_12);
+            else canvas.setFont(&fonts::Font0);
+
+            canvas.setTextSize(isCN ? 1 : 2);
             if (res.decision == Decision::YES) {
                 canvas.setTextColor(GREEN, BLACK);
             } else if (res.decision == Decision::NO) {
@@ -370,7 +375,7 @@ void renderUI(const UIContext& ctx) {
             } else {
                 canvas.setTextColor(YELLOW, BLACK);
             }
-            canvas.print(getDecisionName(res.decision));
+            canvas.print(decName);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
@@ -384,27 +389,30 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextColor(CYAN, BLACK);
             canvas.print(isCN ? "依据:" : "Reason:");
 
-            const char* pReason = res.reason;
+            // 决策依据理由双语映射 (英文原因转换为地道中文)
+            const char* pReason = isCN ? getDecisionReasonCN(res.reason) : res.reason;
             int lineY = 79;
             while (*pReason && lineY <= 105) {
-                char lineBuf[18] = {0};
-                int maxChars = 16;
-                int len = strlen(pReason);
+                char lineBuf[22] = {0};
+                int maxChars = isCN ? 10 : 16;
+                int len = (int)strlen(pReason);
                 if (len <= maxChars) {
                     strcpy(lineBuf, pReason);
                     pReason += len;
                 } else {
                     int breakPos = maxChars;
-                    for (int k = maxChars; k >= 4; --k) {
-                        if (pReason[k] == ' ' || pReason[k] == ';' || pReason[k] == '+') {
-                            breakPos = k;
-                            break;
+                    if (!isCN) {
+                        for (int k = maxChars; k >= 4; --k) {
+                            if (pReason[k] == ' ' || pReason[k] == ';' || pReason[k] == '+') {
+                                breakPos = k;
+                                break;
+                            }
                         }
                     }
                     strncpy(lineBuf, pReason, breakPos);
                     lineBuf[breakPos] = '\0';
                     pReason += breakPos;
-                    if (*pReason == ' ' || *pReason == ';') pReason++;
+                    if (!isCN && (*pReason == ' ' || *pReason == ';')) pReason++;
                 }
                 canvas.setCursor(6, lineY);
                 canvas.setTextColor(LIGHTGREY, BLACK);
@@ -447,7 +455,7 @@ void renderUI(const UIContext& ctx) {
             drawHeader(isCN ? "你的决策轮廓" : "DECISION PROFILE", isCN);
             
             // 左侧绘制用户决策轮廓雷达图
-            drawRadarChart(canvas, 62, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true);
+            drawRadarChart(canvas, 62, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
@@ -488,7 +496,8 @@ void renderUI(const UIContext& ctx) {
 
             canvas.setTextColor(LIGHTGREY, BLACK);
             canvas.setCursor(128, 88);
-            canvas.printf(isCN ? "你的选择: %s" : "Choice: %s", getDecisionName(ctx.userChoice));
+            const char* userDecTxt = isCN ? getDecisionNameCN(ctx.userChoice) : getDecisionName(ctx.userChoice);
+            canvas.printf(isCN ? "你的选择: %s" : "Choice: %s", userDecTxt);
 
             if (ctx.totalPlays > 0) {
                 canvas.setFont(&fonts::Font0);
