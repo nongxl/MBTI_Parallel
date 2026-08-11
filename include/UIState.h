@@ -1,6 +1,7 @@
 #ifndef UI_STATE_H
 #define UI_STATE_H
 
+#include <cstdint>
 #include "MBTIProfile.h"
 #include "Scenario.h"
 #include "DecisionEngine.h"
