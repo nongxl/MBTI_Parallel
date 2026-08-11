@@ -14,6 +14,26 @@ static M5Canvas canvas(&M5Cardputer.Display);
 static uint32_t millis() { return 0; }
 #endif
 
+// 安全 UTF-8 整字对齐断行函数 (杜绝截断 UTF-8 汉字造成的半字节黑块/乱码方块)
+static int getSafeUTF8Break(const char* str, int maxBytes) {
+    int len = (int)strlen(str);
+    if (len <= maxBytes) return len;
+
+    int pos = 0;
+    while (pos < maxBytes) {
+        unsigned char c = (unsigned char)str[pos];
+        int charBytes = 1;
+        if ((c & 0x80) == 0) charBytes = 1;
+        else if ((c & 0xE0) == 0xC0) charBytes = 2;
+        else if ((c & 0xF0) == 0xE0) charBytes = 3;
+        else if ((c & 0xF8) == 0xF0) charBytes = 4;
+
+        if (pos + charBytes > maxBytes) break;
+        pos += charBytes;
+    }
+    return (pos > 0) ? pos : maxBytes;
+}
+
 void initDisplay() {
 #ifdef ARDUINO
     M5Cardputer.Display.begin();
@@ -109,49 +129,49 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 图层 1: 【背景大标题 PARALLEL】
+            // 图层 1: 【前景发光雷达图】(半径锁定 38px, 中心点 120, 46，顶部 Y = 8px 100% 留白不越界)
+            drawRadarChart(canvas, 120, 46, 38, homeData, GREEN, DARKCYAN, false, isCN);
+
+            // 图层 2: 【背景大标题 PARALLEL】(使用亮丽黄色 YELLOW，叠加渲染绝不被掩盖)
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(3);
-            canvas.setCursor(48, 28);
+            canvas.setCursor(48, 30);
             canvas.print("PARALLEL");
 
-            // 图层 2: 【前景巨幅六边形发光雷达图】(半径 50px)
-            drawRadarChart(canvas, 120, 42, 50, homeData, GREEN, DARKCYAN, false, isCN);
-
-            // 图层 3: 【开机精简三选项横向排版】([1. 随机] [2. 自定义] [3. 画像] 原生字库完美兼容)
+            // 图层 3: 【开机精简 3 选项横向排列】(精细 3 等分 X 坐标，完全锁定在屏幕 0 ~ 230px 内)
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
 
-                int yPos = 103;
+                int yPos = 104;
                 if (ctx.bootMenuMode == 0) {
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(12, yPos);
+                    canvas.setCursor(6, yPos);
                     canvas.print("> [1. 随机]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(90, yPos);
+                    canvas.setCursor(84, yPos);
                     canvas.print("  [2. 自定义]");
-                    canvas.setCursor(174, yPos);
+                    canvas.setCursor(162, yPos);
                     canvas.print("  [3. 画像]");
                 } else if (ctx.bootMenuMode == 1) {
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(12, yPos);
+                    canvas.setCursor(6, yPos);
                     canvas.print("  [1. 随机]");
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(90, yPos);
+                    canvas.setCursor(84, yPos);
                     canvas.print("> [2. 自定义]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(174, yPos);
+                    canvas.setCursor(162, yPos);
                     canvas.print("  [3. 画像]");
                 } else {
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(12, yPos);
+                    canvas.setCursor(6, yPos);
                     canvas.print("  [1. 随机]");
-                    canvas.setCursor(90, yPos);
+                    canvas.setCursor(84, yPos);
                     canvas.print("  [2. 自定义]");
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(174, yPos);
+                    canvas.setCursor(162, yPos);
                     canvas.print("> [3. 画像]");
                 }
             } else {
@@ -161,31 +181,31 @@ void renderUI(const UIContext& ctx) {
                 int yPos = 104;
                 if (ctx.bootMenuMode == 0) {
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(8, yPos);
+                    canvas.setCursor(6, yPos);
                     canvas.print(">[1. RANDOM]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(88, yPos);
+                    canvas.setCursor(84, yPos);
                     canvas.print(" [2. CREATE]");
-                    canvas.setCursor(168, yPos);
+                    canvas.setCursor(162, yPos);
                     canvas.print(" [3. PROFILE]");
                 } else if (ctx.bootMenuMode == 1) {
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(8, yPos);
+                    canvas.setCursor(6, yPos);
                     canvas.print(" [1. RANDOM]");
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(88, yPos);
+                    canvas.setCursor(84, yPos);
                     canvas.print(">[2. CREATE]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(168, yPos);
+                    canvas.setCursor(162, yPos);
                     canvas.print(" [3. PROFILE]");
                 } else {
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(8, yPos);
+                    canvas.setCursor(6, yPos);
                     canvas.print(" [1. RANDOM]");
-                    canvas.setCursor(88, yPos);
+                    canvas.setCursor(84, yPos);
                     canvas.print(" [2. CREATE]");
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(168, yPos);
+                    canvas.setCursor(162, yPos);
                     canvas.print(">[3. PROFILE]");
                 }
             }
@@ -349,11 +369,12 @@ void renderUI(const UIContext& ctx) {
             int lineY = 46;
             while (*desc && lineY <= 102) {
                 char buf[36] = {0};
-                int takeBytes = isCN ? 32 : 32;
+                int takeBytes = getSafeUTF8Break(desc, isCN ? 32 : 32);
                 strncpy(buf, desc, takeBytes);
+                buf[takeBytes] = '\0';
                 canvas.setCursor(8, lineY);
                 canvas.print(buf);
-                desc += strlen(buf);
+                desc += takeBytes;
                 lineY += 15;
             }
 
@@ -485,30 +506,17 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextColor(CYAN, BLACK);
             canvas.print(isCN ? "依据:" : "Reason:");
 
+            // 【彻底杜绝黑块/乱码方块】使用 getSafeUTF8Break 按 3 字节整汉字边界切分！
             const char* pReason = isCN ? getDecisionReasonCN(res.reason) : res.reason;
             int lineY = 79;
             while (*pReason && lineY <= 105) {
-                char lineBuf[22] = {0};
-                int maxChars = isCN ? 10 : 16;
-                int len = (int)strlen(pReason);
-                if (len <= maxChars) {
-                    strcpy(lineBuf, pReason);
-                    pReason += len;
-                } else {
-                    int breakPos = maxChars;
-                    if (!isCN) {
-                        for (int k = maxChars; k >= 4; --k) {
-                            if (pReason[k] == ' ' || pReason[k] == ';' || pReason[k] == '+') {
-                                breakPos = k;
-                                break;
-                            }
-                        }
-                    }
-                    strncpy(lineBuf, pReason, breakPos);
-                    lineBuf[breakPos] = '\0';
-                    pReason += breakPos;
-                    if (!isCN && (*pReason == ' ' || *pReason == ';')) pReason++;
-                }
+                char lineBuf[28] = {0};
+                int maxB = isCN ? 21 : 16;
+                int takeBytes = getSafeUTF8Break(pReason, maxB);
+                strncpy(lineBuf, pReason, takeBytes);
+                lineBuf[takeBytes] = '\0';
+                pReason += takeBytes;
+
                 canvas.setCursor(6, lineY);
                 canvas.setTextColor(0x7BEF, BLACK);
                 canvas.print(lineBuf);

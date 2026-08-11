@@ -30,14 +30,14 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
         vy[i] = centerY + static_cast<int>(r * sinf(angle));
     }
 
-    // 2. 【图层 1: 多边形内衬淡蓝色充能填充】(先绘制底部充能块)
-    uint16_t cyanFillColor = 0x0219; // 深暗青蓝色内衬色 (RGB565)
+    // 2. 【图层 1: 极淡低调透光蓝色充能内衬】(RGB565: 0x00A5 极淡微光深青蓝，绝不遮盖任何背景文字与线段)
+    uint16_t cyanFillColor = 0x00A5;
     for (int i = 0; i < 6; ++i) {
         int next = (i + 1) % 6;
         canvas.fillTriangle(centerX, centerY, vx[i], vy[i], vx[next], vy[next], cyanFillColor);
     }
 
-    // 3. 【图层 2: 坐标系同心网格线与放射轴】(叠加在蓝色填充块上方，实现完美悬浮穿透)
+    // 3. 【图层 2: 坐标系同心网格线与放射轴】(完全悬浮在极淡蓝色填充块上方)
     for (int layer = 1; layer <= 3; ++layer) {
         float r = radius * (layer / 3.0f);
         int px[6], py[6];
