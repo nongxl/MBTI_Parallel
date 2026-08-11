@@ -120,7 +120,7 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(48, 38);
             canvas.print("PARALLEL");
 
-            // 图层 1 & 2: 48px 巨幅雷达 Logo (中心点 120, 55)
+            // 图层 1 & 2: 48px 巨幅雷达 Logo (中心点 120, 55, 统一亮绿色连线 GREEN)
             drawRadarChart(canvas, 120, 55, 48, homeData, GREEN, DARKCYAN, false, isCN);
 
             // 图层 3: 开机三选项贴底排版
@@ -180,7 +180,7 @@ void renderUI(const UIContext& ctx) {
                     canvas.setCursor(84, yPos);
                     canvas.print(">[2. CREATE]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(162, yPos);
+                    canvas.setCursor(168, yPos);
                     canvas.print(" [3. PROFILE]");
                 } else {
                     canvas.setTextColor(0x7BEF, BLACK);
@@ -206,6 +206,7 @@ void renderUI(const UIContext& ctx) {
         case AppState::MY_PROFILE: {
             drawHeader(isCN ? "真实长效 MBTI 画板" : "MY LONG-TERM PROFILE", isCN);
 
+            // 统一亮绿色连线 GREEN
             drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -296,7 +297,6 @@ void renderUI(const UIContext& ctx) {
                 for (int i = 0; i < 6; ++i) items[i] = getTensionName(static_cast<TensionType>(i), isCN);
             }
 
-            // 纵向分布扩宽，拉开至 34, 66, 98，利用释放的底部空间
             for (int i = 0; i < count; ++i) {
                 int col = i % 2;
                 int row = i / 2;
@@ -342,7 +342,6 @@ void renderUI(const UIContext& ctx) {
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             int lineY = 46;
-            // 底部限制完全解封至 lineY <= 120 (可多容纳 2 行文字，绝不截断描述剧情)
             while (*desc && lineY <= 120) {
                 char buf[64] = {0};
                 int takeBytes = getSafeUTF8Break(desc, isCN ? 54 : 37);
@@ -369,7 +368,6 @@ void renderUI(const UIContext& ctx) {
                     canvas.setTextSize(2);
                 }
 
-                // 选项间距垂直纵向舒展分布于 36, 66, 96
                 canvas.setCursor(10, 36 + i * 30);
                 const char* txt = isCN ? choicesCN[i] : choices[i];
                 if (i == ctx.selectedMenuIndex) {
@@ -386,6 +384,7 @@ void renderUI(const UIContext& ctx) {
         case AppState::YOUR_MATCH: {
             drawHeader(isCN ? "你的决策轮廓" : "YOUR DECISION PROFILE", isCN);
             
+            // 统一亮绿色连线 GREEN
             drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -441,7 +440,8 @@ void renderUI(const UIContext& ctx) {
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle, isCN);
 
-            drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, CYAN, DARKCYAN, true, isCN);
+            // 【全界面统一】将 lineColor 统一修正为亮绿色 GREEN！
+            drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
@@ -480,7 +480,6 @@ void renderUI(const UIContext& ctx) {
 
             const char* pReason = isCN ? getDecisionReasonCN(res.reason) : res.reason;
             int lineY = 79;
-            // 依据文字展示限制解封拓展至 lineY <= 120，完整展现丰富的大段分析
             while (*pReason && lineY <= 120) {
                 char lineBuf[28] = {0};
                 int maxB = isCN ? 21 : 16;
