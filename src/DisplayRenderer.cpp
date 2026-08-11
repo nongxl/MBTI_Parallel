@@ -47,7 +47,7 @@ void renderUI(const UIContext& ctx) {
         case AppState::HOME: {
             canvas.fillScreen(BLACK);
             
-            // 基于运行时间计算 6 维缓慢正弦波律动波形 (Sinusoidal Morphing Wave)
+            // 基于运行时间计算 6 维正弦波律动波形 (Sinusoidal Morphing Wave)
             uint32_t now = millis();
             float t = now / 1000.0f;
             RadarData homeData = {
@@ -59,17 +59,19 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 绘制大幅放大的科技感主六边形图 (centerX = 120, centerY = 48, radius = 42)
-            drawRadarChart(canvas, 120, 48, 42, homeData, GREEN, DARKCYAN, false);
+            // 绘制更强震撼放大的科技感主六边形图 (centerX = 120, centerY = 46, radius = 48)
+            drawRadarChart(canvas, 120, 46, 48, homeData, GREEN, DARKCYAN, false);
 
+            // 标题文字 PARALLEL 向下移至 Y = 98
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(2);
-            canvas.setCursor(72, 92);
+            canvas.setCursor(72, 98);
             canvas.print("PARALLEL");
 
+            // 操作提示 PRESS ENTER TO START 向下移至 Y = 118
             canvas.setTextColor(CYAN, BLACK);
             canvas.setTextSize(1);
-            canvas.setCursor(62, 112);
+            canvas.setCursor(62, 118);
             canvas.print("PRESS ENTER TO START");
 
             if (ctx.totalPlays > 0) {
