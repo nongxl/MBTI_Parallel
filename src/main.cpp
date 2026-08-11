@@ -12,21 +12,45 @@
 static UIContext g_uiContext;
 
 #ifdef ARDUINO
+// 【核心重构】按键松开复位锁 (Key-Release Reset Lock)
+// 彻底解决轻按被误判成长按/连发的问题：按一次键 100% 仅触发一次，必须完全松开手指后才允许下一次按压
+static bool g_keyReleasedLock = false;
+
 static KeyInput readCardputerKeyboard() {
     M5Cardputer.update();
 
-    if (M5Cardputer.Keyboard.isKeyPressed(';')) return KeyInput::UP;     // ; 键向上
-    if (M5Cardputer.Keyboard.isKeyPressed('.')) return KeyInput::DOWN;   // . 键向下
-    if (M5Cardputer.Keyboard.isKeyPressed(',')) return KeyInput::LEFT;   // , 键向左
-    if (M5Cardputer.Keyboard.isKeyPressed('/')) return KeyInput::RIGHT;  // / 键向右
-    if (M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER)) return KeyInput::ENTER;
-    if (M5Cardputer.Keyboard.isKeyPressed('`') || M5Cardputer.Keyboard.isKeyPressed(KEY_BACKSPACE)) return KeyInput::BACK;
+    bool anyPressed = M5Cardputer.Keyboard.isPressed();
 
-    // 亦支持方向按键或经典 WSAD 键
-    if (M5Cardputer.Keyboard.isKeyPressed('w') || M5Cardputer.Keyboard.isKeyPressed('W')) return KeyInput::UP;
-    if (M5Cardputer.Keyboard.isKeyPressed('s') || M5Cardputer.Keyboard.isKeyPressed('S')) return KeyInput::DOWN;
-    if (M5Cardputer.Keyboard.isKeyPressed('a') || M5Cardputer.Keyboard.isKeyPressed('A')) return KeyInput::LEFT;
-    if (M5Cardputer.Keyboard.isKeyPressed('d') || M5Cardputer.Keyboard.isKeyPressed('D')) return KeyInput::RIGHT;
+    // 1. 如果当前没有任何按键处于按下状态，说明手指已抬起松开，解锁！
+    if (!anyPressed) {
+        g_keyReleasedLock = false;
+        return KeyInput::NONE;
+    }
+
+    // 2. 如果当前有按键按下，但处于锁定状态（说明是同一次按压的持续驻留），绝对不二次触发
+    if (g_keyReleasedLock) {
+        return KeyInput::NONE;
+    }
+
+    // 3. 首次按压瞬间 (Press Down Edge)：识别具体的按键
+    KeyInput detected = KeyInput::NONE;
+
+    if (M5Cardputer.Keyboard.isKeyPressed(';')) detected = KeyInput::UP;     // ; 键向上
+    else if (M5Cardputer.Keyboard.isKeyPressed('.')) detected = KeyInput::DOWN;   // . 键向下
+    else if (M5Cardputer.Keyboard.isKeyPressed(',')) detected = KeyInput::LEFT;   // , 键向左
+    else if (M5Cardputer.Keyboard.isKeyPressed('/')) detected = KeyInput::RIGHT;  // / 键向右
+    else if (M5Cardputer.Keyboard.isKeyPressed(KEY_ENTER)) detected = KeyInput::ENTER;
+    else if (M5Cardputer.Keyboard.isKeyPressed('`') || M5Cardputer.Keyboard.isKeyPressed(KEY_BACKSPACE)) detected = KeyInput::BACK;
+    else if (M5Cardputer.Keyboard.isKeyPressed('w') || M5Cardputer.Keyboard.isKeyPressed('W')) detected = KeyInput::UP;
+    else if (M5Cardputer.Keyboard.isKeyPressed('s') || M5Cardputer.Keyboard.isKeyPressed('S')) detected = KeyInput::DOWN;
+    else if (M5Cardputer.Keyboard.isKeyPressed('a') || M5Cardputer.Keyboard.isKeyPressed('A')) detected = KeyInput::LEFT;
+    else if (M5Cardputer.Keyboard.isKeyPressed('d') || M5Cardputer.Keyboard.isKeyPressed('D')) detected = KeyInput::RIGHT;
+
+    // 4. 一旦识别到有效的按压，立即上锁，并返回按键指令！
+    if (detected != KeyInput::NONE) {
+        g_keyReleasedLock = true;
+        return detected;
+    }
 
     return KeyInput::NONE;
 }
@@ -53,24 +77,11 @@ void loop() {
         renderUI(g_uiContext);
     }
 
-    // 升级版防连击/防抖与状态切换穿透锁定算法 (State Transition Shield Lock)
-    static uint32_t lastKeyPressTime = 0;
+    // 调用按键松开复位锁算法，极速零延迟响应，且 100% 防长按误触
     KeyInput key = readCardputerKeyboard();
-
     if (key != KeyInput::NONE) {
-        // 250ms 强效物理防抖冷却锁定
-        if (currentMillis - lastKeyPressTime > 250) {
-            lastKeyPressTime = currentMillis;
-            AppState stateBeforeInput = g_uiContext.state;
-            
-            handleInput(g_uiContext, key);
-            renderUI(g_uiContext);
-
-            // 【状态切换安全防穿透锁】如果按键导致了 AppState 界面跳转，额外施加 120ms 防穿透阻尼
-            if (stateBeforeInput != g_uiContext.state) {
-                lastKeyPressTime = currentMillis + 120;
-            }
-        }
+        handleInput(g_uiContext, key);
+        renderUI(g_uiContext);
     }
 
     // 1. 模拟动画进行中时，不断刷新 16 分支进度条
