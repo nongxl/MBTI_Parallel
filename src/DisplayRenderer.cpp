@@ -129,18 +129,17 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 【图层 0 (最底层 Layer 0)】: 在黑屏最底部绘制亮黄色 PARALLEL 大字
+            // 图层 0 (最底层 Layer 0): 亮黄色 PARALLEL 大字
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(3);
             canvas.setCursor(48, 38);
             canvas.print("PARALLEL");
 
-            // 【图层 1 & 2 (中间与上层 Layer 1 & 2)】: 48px 巨幅雷达 Logo (中心点 120, 55, 半径 48px)
-            // 真实 25% Smooth Alpha 磨砂玻璃平滑透射，背后的黄色 PARALLEL 大字沉浸发光！
+            // 图层 1 & 2: 48px 巨幅雷达 Logo (中心点 120, 55)
             drawRadarChart(canvas, 120, 55, 48, homeData, GREEN, DARKCYAN, false, isCN);
 
-            // 【图层 3】: 【开机选项下移至 Y = 118 贴近底部】([1. 随机] [2. 自定义] [3. 画像])
+            // 图层 3: 开机选项下移至 Y = 118 贴近底部
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
@@ -197,7 +196,7 @@ void renderUI(const UIContext& ctx) {
                     canvas.setCursor(84, yPos);
                     canvas.print(">[2. CREATE]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(162, yPos);
+                    canvas.setCursor(168, yPos);
                     canvas.print(" [3. PROFILE]");
                 } else {
                     canvas.setTextColor(0x7BEF, BLACK);
@@ -210,8 +209,6 @@ void renderUI(const UIContext& ctx) {
                     canvas.print(">[3. PROFILE]");
                 }
             }
-
-            // 【完全移除开机屏 drawFooter 冗余提示，呈现极简高雅气场】
 
             if (ctx.totalPlays > 0) {
                 canvas.setFont(&fonts::Font0);
@@ -367,8 +364,9 @@ void renderUI(const UIContext& ctx) {
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             int lineY = 46;
             while (*desc && lineY <= 102) {
-                char buf[36] = {0};
-                int takeBytes = getSafeUTF8Break(desc, isCN ? 32 : 32);
+                char buf[64] = {0};
+                // 扩宽至整屏全宽：中文每行可容纳 18 个汉字 = 54 字节 (216px)，英文 37 个字符
+                int takeBytes = getSafeUTF8Break(desc, isCN ? 54 : 37);
                 strncpy(buf, desc, takeBytes);
                 buf[takeBytes] = '\0';
                 canvas.setCursor(8, lineY);
