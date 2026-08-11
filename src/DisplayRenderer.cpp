@@ -2,11 +2,15 @@
 #include "RadarChart.h"
 #include <cstdio>
 #include <cstring>
+#include <cmath>
 
 #ifdef ARDUINO
+#include <Arduino.h>
 #include <M5Cardputer.h>
 
 static M5Canvas canvas(&M5Cardputer.Display);
+#else
+static uint32_t millis() { return 0; }
 #endif
 
 void initDisplay() {
@@ -43,18 +47,29 @@ void renderUI(const UIContext& ctx) {
         case AppState::HOME: {
             canvas.fillScreen(BLACK);
             
-            // 放大中央科技感六边形图案
-            RadarData homeData = { 75.0f, 90.0f, 60.0f, 85.0f, 40.0f, 70.0f };
-            drawRadarChart(canvas, 120, 50, 35, homeData, GREEN, DARKCYAN, false);
+            // 基于运行时间计算 6 维缓慢正弦波律动波形 (Sinusoidal Morphing Wave)
+            uint32_t now = millis();
+            float t = now / 1000.0f;
+            RadarData homeData = {
+                72.0f + 18.0f * sinf(t * 1.3f),
+                82.0f + 14.0f * cosf(t * 0.9f + 1.1f),
+                68.0f + 16.0f * sinf(t * 1.6f + 2.2f),
+                78.0f + 15.0f * cosf(t * 1.1f + 3.3f),
+                55.0f + 20.0f * sinf(t * 0.8f + 4.4f),
+                74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
+            };
+
+            // 绘制大幅放大的科技感主六边形图 (centerX = 120, centerY = 48, radius = 42)
+            drawRadarChart(canvas, 120, 48, 42, homeData, GREEN, DARKCYAN, false);
 
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(2);
-            canvas.setCursor(72, 90);
+            canvas.setCursor(72, 92);
             canvas.print("PARALLEL");
 
             canvas.setTextColor(CYAN, BLACK);
             canvas.setTextSize(1);
-            canvas.setCursor(62, 111);
+            canvas.setCursor(62, 112);
             canvas.print("PRESS ENTER TO START");
 
             if (ctx.totalPlays > 0) {

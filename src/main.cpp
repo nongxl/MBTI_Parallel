@@ -71,6 +71,12 @@ void loop() {
         delay(20);
     }
 
+    // 3. 当处于开机 HOME 屏时，驱动正弦波呼吸脉冲雷达图律动 (33fps)
+    if (g_uiContext.state == AppState::HOME) {
+        renderUI(g_uiContext);
+        delay(30);
+    }
+
     delay(10);
 }
 #else
