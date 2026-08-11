@@ -41,8 +41,9 @@ static void drawHeader(const char* title, bool isCN) {
     canvas.drawLine(0, 22, 240, 22, GREEN);
 }
 
+// 统一将全局操作提示指引颜色改为低调低明度的淡灰色 (0x7BEF / DARKGREY)，与主内容做视觉区分
 static void drawFooter(const char* hint, bool isCN) {
-    canvas.setTextColor(LIGHTGREY, BLACK);
+    canvas.setTextColor(0x7BEF, BLACK); // 低调淡灰色
     if (isCN) {
         canvas.setFont(&fonts::efontCN_12);
         canvas.setTextSize(1);
@@ -109,72 +110,94 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 图层 1: 【背景大标题 PARALLEL】(恢复为之前的亮丽黄色 YELLOW 字体)
+            // 图层 1: 【背景大标题 PARALLEL】(大号鲜艳黄色 YELLOW 字体)
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(3);
-            canvas.setCursor(48, 25);
+            canvas.setCursor(48, 28);
             canvas.print("PARALLEL");
 
-            // 图层 2: 【前景六边形发光雷达图】(带半透明淡蓝色充能内衬，透射黄色背景大字)
-            drawRadarChart(canvas, 120, 38, 42, homeData, GREEN, DARKCYAN, false, isCN);
+            // 图层 2: 【前景巨幅六边形发光雷达图】(半径放大至 50px，高科技极客范十足)
+            drawRadarChart(canvas, 120, 42, 50, homeData, GREEN, DARKCYAN, false, isCN);
 
-            // 图层 3: 开机三大模式切选菜单 (1. 🎲 随机模式 / 2. 🛠️ 自定义模式 / 3. 👤 真实人格画像)
+            // 图层 3: 【开机精简三选项横向排版】([🎲 随机] [🛠️ 自定义] [👤 画像])
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
 
-                const char* m0 = "  1. 🎲 随机场景模式";
-                const char* m1 = "  2. 🛠️ 自定义场景构造";
-                const char* m2 = "  3. 👤 真实人格画像";
-
-                if (ctx.bootMenuMode == 0) m0 = "> 1. 🎲 随机场景模式";
-                else if (ctx.bootMenuMode == 1) m1 = "> 2. 🛠️ 自定义场景构造";
-                else m2 = "> 3. 👤 真实人格画像";
-
-                canvas.setTextColor((ctx.bootMenuMode == 0) ? CYAN : LIGHTGREY, BLACK);
-                canvas.setCursor(32, 75);
-                canvas.print(m0);
-
-                canvas.setTextColor((ctx.bootMenuMode == 1) ? CYAN : LIGHTGREY, BLACK);
-                canvas.setCursor(32, 90);
-                canvas.print(m1);
-
-                canvas.setTextColor((ctx.bootMenuMode == 2) ? CYAN : LIGHTGREY, BLACK);
-                canvas.setCursor(32, 105);
-                canvas.print(m2);
+                int yPos = 103;
+                if (ctx.bootMenuMode == 0) {
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.setCursor(10, yPos);
+                    canvas.print("> [🎲 随机]");
+                    canvas.setTextColor(0x7BEF, BLACK);
+                    canvas.setCursor(88, yPos);
+                    canvas.print("  [🛠️ 自定义]");
+                    canvas.setCursor(170, yPos);
+                    canvas.print("  [👤 画像]");
+                } else if (ctx.bootMenuMode == 1) {
+                    canvas.setTextColor(0x7BEF, BLACK);
+                    canvas.setCursor(10, yPos);
+                    canvas.print("  [🎲 随机]");
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.setCursor(88, yPos);
+                    canvas.print("> [🛠️ 自定义]");
+                    canvas.setTextColor(0x7BEF, BLACK);
+                    canvas.setCursor(170, yPos);
+                    canvas.print("  [👤 画像]");
+                } else {
+                    canvas.setTextColor(0x7BEF, BLACK);
+                    canvas.setCursor(10, yPos);
+                    canvas.print("  [🎲 随机]");
+                    canvas.setCursor(88, yPos);
+                    canvas.print("  [🛠️ 自定义]");
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.setCursor(170, yPos);
+                    canvas.print("> [👤 画像]");
+                }
             } else {
                 canvas.setFont(&fonts::Font0);
                 canvas.setTextSize(1);
 
-                const char* m0 = "  1. RANDOM SCENARIO";
-                const char* m1 = "  2. CREATE SCENARIO";
-                const char* m2 = "  3. MY MBTI PROFILE";
-
-                if (ctx.bootMenuMode == 0) m0 = "> 1. RANDOM SCENARIO";
-                else if (ctx.bootMenuMode == 1) m1 = "> 2. CREATE SCENARIO";
-                else m2 = "> 3. MY MBTI PROFILE";
-
-                canvas.setTextColor((ctx.bootMenuMode == 0) ? CYAN : LIGHTGREY, BLACK);
-                canvas.setCursor(32, 75);
-                canvas.print(m0);
-
-                canvas.setTextColor((ctx.bootMenuMode == 1) ? CYAN : LIGHTGREY, BLACK);
-                canvas.setCursor(32, 90);
-                canvas.print(m1);
-
-                canvas.setTextColor((ctx.bootMenuMode == 2) ? CYAN : LIGHTGREY, BLACK);
-                canvas.setCursor(32, 105);
-                canvas.print(m2);
+                int yPos = 104;
+                if (ctx.bootMenuMode == 0) {
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.setCursor(8, yPos);
+                    canvas.print(">[RANDOM]");
+                    canvas.setTextColor(0x7BEF, BLACK);
+                    canvas.setCursor(88, yPos);
+                    canvas.print(" [CREATE]");
+                    canvas.setCursor(168, yPos);
+                    canvas.print(" [PROFILE]");
+                } else if (ctx.bootMenuMode == 1) {
+                    canvas.setTextColor(0x7BEF, BLACK);
+                    canvas.setCursor(8, yPos);
+                    canvas.print(" [RANDOM]");
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.setCursor(88, yPos);
+                    canvas.print(">[CREATE]");
+                    canvas.setTextColor(0x7BEF, BLACK);
+                    canvas.setCursor(168, yPos);
+                    canvas.print(" [PROFILE]");
+                } else {
+                    canvas.setTextColor(0x7BEF, BLACK);
+                    canvas.setCursor(8, yPos);
+                    canvas.print(" [RANDOM]");
+                    canvas.setCursor(88, yPos);
+                    canvas.print(" [CREATE]");
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.setCursor(168, yPos);
+                    canvas.print(">[PROFILE]");
+                }
             }
 
-            // 图层 4: 底栏 Footer 引导
-            const char* homeFooter = isCN ? "[上下] 模式  [ENTER] 开始" : "[UP/DN] Mode  [ENTER] Start";
+            // 图层 4: 底栏 Footer 引导 (低调淡灰色 0x7BEF)
+            const char* homeFooter = isCN ? "[左右] 切换模式  [ENTER] 开始" : "[L/R] Select Mode  [ENTER] Start";
             drawFooter(homeFooter, isCN);
 
             if (ctx.totalPlays > 0) {
                 canvas.setFont(&fonts::Font0);
-                canvas.setTextColor(DARKGREY, BLACK);
+                canvas.setTextColor(0x7BEF, BLACK);
                 canvas.setCursor(185, 5);
                 canvas.printf("PLS:%d", ctx.totalPlays);
             }
@@ -212,7 +235,7 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 80);
             canvas.printf(isCN ? "已测场数: %d 场" : "Tested : %d", ctx.userHistory.totalPlays);
 
-            canvas.setTextColor(LIGHTGREY, BLACK);
+            canvas.setTextColor(0x7BEF, BLACK);
             canvas.setCursor(6, 96);
             canvas.printf(isCN ? "同意%d 拒绝%d 犹豫%d" : "Y:%d N:%d M:%d",
                           ctx.userHistory.yesCount, ctx.userHistory.noCount, ctx.userHistory.maybeCount);
@@ -389,7 +412,7 @@ void renderUI(const UIContext& ctx) {
             else canvas.setFont(&fonts::Font0);
 
             canvas.setTextSize(1);
-            canvas.setTextColor(LIGHTGREY, BLACK);
+            canvas.setTextColor(0x7BEF, BLACK);
             canvas.setCursor(6, 60);
             canvas.print(isCN ? "最大分歧:" : "BIGGEST DIFF:");
 
@@ -411,7 +434,7 @@ void renderUI(const UIContext& ctx) {
 
             if (ctx.totalPlays > 0) {
                 canvas.setFont(&fonts::Font0);
-                canvas.setTextColor(DARKGREY, BLACK);
+                canvas.setTextColor(0x7BEF, BLACK);
                 canvas.setCursor(185, 5);
                 canvas.printf("PLS:%d", ctx.totalPlays);
             }
@@ -488,7 +511,7 @@ void renderUI(const UIContext& ctx) {
                     if (!isCN && (*pReason == ' ' || *pReason == ';')) pReason++;
                 }
                 canvas.setCursor(6, lineY);
-                canvas.setTextColor(LIGHTGREY, BLACK);
+                canvas.setTextColor(0x7BEF, BLACK);
                 canvas.print(lineBuf);
                 lineY += 13;
             }
