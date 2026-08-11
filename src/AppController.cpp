@@ -117,7 +117,6 @@ void initApp(UIContext& ctx) {
     ctx.userChoice = Decision::YES;
     ctx.animStartTime = 0;
     ctx.animProgress = 0;
-    ctx.totalPlays = 0;
     ctx.dnaHistoryCount = 0;
 
 #ifdef ARDUINO
@@ -130,12 +129,16 @@ void initApp(UIContext& ctx) {
         ctx.state = AppState::HOME;
     } else {
         ctx.lang = Language::CHINESE;
-        ctx.state = AppState::LANGUAGE_SELECT; // 首次开机进入独立语言选择弹窗屏
+        ctx.state = AppState::LANGUAGE_SELECT;
     }
 #else
     ctx.lang = Language::CHINESE;
     ctx.state = AppState::HOME;
 #endif
+
+    // 从 NVS 加载用户累积决策历史
+    loadUserHistoryFromNVS(ctx.userHistory);
+    ctx.totalPlays = ctx.userHistory.totalPlays;
 
     // 默认自定义 4 步 DNA
     ctx.customDNA.who = WhoType::FRIEND;
@@ -205,15 +208,13 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
     switch (ctx.state) {
         case AppState::LANGUAGE_SELECT: {
-            // 首次开机语言选择屏幕
             if (key == KeyInput::LEFT || key == KeyInput::UP) {
-                ctx.selectedMenuIndex = 0; // 中文
+                ctx.selectedMenuIndex = 0;
             } else if (key == KeyInput::RIGHT || key == KeyInput::DOWN) {
-                ctx.selectedMenuIndex = 1; // English
+                ctx.selectedMenuIndex = 1;
             } else if (key == KeyInput::ENTER) {
                 ctx.lang = (ctx.selectedMenuIndex == 0) ? Language::CHINESE : Language::ENGLISH;
 #ifdef ARDUINO
-                // 锁存选中的语言持久化存入 ESP32 NVS Flash
                 prefs.putBool("configured", true);
                 prefs.putInt("lang", static_cast<int>(ctx.lang));
 #endif
@@ -364,6 +365,10 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 findBiggestDifferenceMBTI(ctx, ctx.biggestDiffMBTI, ctx.biggestDiffDecision);
                 ctx.matchType = determineMatchType(ctx);
 
+                // 【记录并 0ms 持久化存入 ESP32 NVS Flash】
+                recordUserDecisionToHistory(ctx.userHistory, ctx.userProfile, ctx.userChoice);
+                ctx.totalPlays = ctx.userHistory.totalPlays;
+
                 RadarData target = {
                     ctx.userProfile.risk,
                     ctx.userProfile.novelty,
@@ -405,7 +410,6 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
                 startRadarAnimation(ctx, target, now);
             } else if (key == KeyInput::ENTER) {
-                ctx.totalPlays++;
                 if (ctx.bootMenuMode == 1) {
                     ctx.state = AppState::BUILDER_WHO;
                 } else {

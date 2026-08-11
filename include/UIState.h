@@ -83,6 +83,9 @@ struct UIContext {
     MBTIType biggestDiffMBTI;
     Decision biggestDiffDecision;
 
+    // 用户长效 ESP32 NVS 决策历史持久化与统计均值
+    UserHistoryStats userHistory;
+
     // 程序化场景生成 DNA 10 次防重复历史
     ScenarioDNA recentDNAs[RECENT_DNA_HISTORY_SIZE];
     int dnaHistoryCount;
