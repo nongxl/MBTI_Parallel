@@ -5,6 +5,7 @@
 #include "ScenarioGenerator.h"
 #include <cstdio>
 #include <cstring>
+#include <cmath>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -21,6 +22,11 @@ static uint32_t millis() { return 0; }
 #ifdef CHANGE
 #undef CHANGE
 #endif
+
+static float cubicEaseOut(float t) {
+    float f = 1.0f - t;
+    return 1.0f - f * f * f;
+}
 
 static void startRadarAnimation(UIContext& ctx, const RadarData& targetData, uint32_t currentMillis) {
     ctx.startRadar = ctx.currentRadar;
@@ -119,21 +125,24 @@ void updateApp(UIContext& ctx, uint32_t currentMillis) {
         }
     }
 
-    // 2. 处理六维雷达极坐标平滑补间形变插值 (250ms 形变)
+    // 2. 处理六维雷达极坐标平滑补间形变插值 (300ms Cubic Ease-Out 缓动形变)
     if (ctx.isRadarAnimActive) {
         uint32_t elapsed = currentMillis - ctx.radarAnimStartTime;
-        float t = elapsed / 250.0f;
-        if (t >= 1.0f) {
-            t = 1.0f;
+        float rawT = elapsed / 300.0f; // 300ms 黄金动效时间
+        if (rawT >= 1.0f) {
+            rawT = 1.0f;
             ctx.isRadarAnimActive = false;
         }
 
-        ctx.currentRadar.risk = ctx.startRadar.risk + (ctx.endRadar.risk - ctx.startRadar.risk) * t;
-        ctx.currentRadar.novelty = ctx.startRadar.novelty + (ctx.endRadar.novelty - ctx.startRadar.novelty) * t;
-        ctx.currentRadar.logic = ctx.startRadar.logic + (ctx.endRadar.logic - ctx.startRadar.logic) * t;
-        ctx.currentRadar.social = ctx.startRadar.social + (ctx.endRadar.social - ctx.startRadar.social) * t;
-        ctx.currentRadar.planning = ctx.startRadar.planning + (ctx.endRadar.planning - ctx.startRadar.planning) * t;
-        ctx.currentRadar.practicality = ctx.startRadar.practicality + (ctx.endRadar.practicality - ctx.startRadar.practicality) * t;
+        // 应用 Cubic Ease-Out 缓动曲线 (启动迅速，终点减速落脚优雅丝滑)
+        float easeT = cubicEaseOut(rawT);
+
+        ctx.currentRadar.risk = ctx.startRadar.risk + (ctx.endRadar.risk - ctx.startRadar.risk) * easeT;
+        ctx.currentRadar.novelty = ctx.startRadar.novelty + (ctx.endRadar.novelty - ctx.startRadar.novelty) * easeT;
+        ctx.currentRadar.logic = ctx.startRadar.logic + (ctx.endRadar.logic - ctx.startRadar.logic) * easeT;
+        ctx.currentRadar.social = ctx.startRadar.social + (ctx.endRadar.social - ctx.startRadar.social) * easeT;
+        ctx.currentRadar.planning = ctx.startRadar.planning + (ctx.endRadar.planning - ctx.startRadar.planning) * easeT;
+        ctx.currentRadar.practicality = ctx.startRadar.practicality + (ctx.endRadar.practicality - ctx.startRadar.practicality) * easeT;
     }
 }
 
@@ -316,7 +325,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 } else {
                     ctx.exploreIndex = (ctx.exploreIndex + 1) % 16;
                 }
-                // 启动雷达极坐标补间平滑过渡形变动画
+                // 启动 300ms 丝滑 Cubic Ease-Out 缓动雷达形变
                 const PersonalityProfile& pProf = getMBTIProfile(ctx.results[ctx.exploreIndex].personality);
                 RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
                 startRadarAnimation(ctx, target, now);

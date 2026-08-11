@@ -52,32 +52,36 @@ void loop() {
         renderUI(g_uiContext);
     }
 
+    // 时间戳非阻塞防抖 (避免硬 delay(150) 卡顿中断 60FPS 动画)
+    static uint32_t lastKeyPressTime = 0;
     KeyInput key = readCardputerKeyboard();
     if (key != KeyInput::NONE) {
-        handleInput(g_uiContext, key);
-        renderUI(g_uiContext);
-        delay(150); // 防抖
+        if (currentMillis - lastKeyPressTime > 160) {
+            lastKeyPressTime = currentMillis;
+            handleInput(g_uiContext, key);
+            renderUI(g_uiContext);
+        }
     }
 
     // 1. 模拟动画进行中时，不断刷新 16 分支进度条
     if (g_uiContext.state == AppState::SIMULATING) {
         renderUI(g_uiContext);
-        delay(30);
+        delay(15);
     }
 
-    // 2. 当六维雷达图形变补间插值动画进行中时，保持 ~50fps 高帧率平滑重绘
+    // 2. 当六维雷达图形变补间插值动画进行中时，保持 60FPS 零卡顿渲染全速驱动！
     if (g_uiContext.isRadarAnimActive) {
         renderUI(g_uiContext);
-        delay(20);
+        delay(5);
     }
 
-    // 3. 当处于开机 HOME 屏时，驱动正弦波呼吸脉冲雷达图律动 (33fps)
+    // 3. 当处于开机 HOME 屏时，驱动 60FPS 正弦波呼吸脉冲雷达图律动
     if (g_uiContext.state == AppState::HOME) {
         renderUI(g_uiContext);
-        delay(30);
+        delay(15);
     }
 
-    delay(10);
+    delay(5);
 }
 #else
 int main() {
