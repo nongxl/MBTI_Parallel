@@ -222,9 +222,9 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
         case AppState::HOME:
             if (key == KeyInput::LEFT || key == KeyInput::UP) {
-                ctx.bootMenuMode = (ctx.bootMenuMode + 2) % 3; // 向左/向上移动
+                ctx.bootMenuMode = (ctx.bootMenuMode + 2) % 3;
             } else if (key == KeyInput::RIGHT || key == KeyInput::DOWN) {
-                ctx.bootMenuMode = (ctx.bootMenuMode + 1) % 3; // 向右/向下移动
+                ctx.bootMenuMode = (ctx.bootMenuMode + 1) % 3;
             } else if (key == KeyInput::ENTER) {
                 if (ctx.bootMenuMode == 0) {
                     triggerRandomScenario(ctx);
@@ -232,7 +232,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 } else if (ctx.bootMenuMode == 1) {
                     ctx.state = AppState::BUILDER_WHO;
                     ctx.selectedMenuIndex = 0;
-                } else { // 2: MY_PROFILE 真实人格画像
+                } else {
                     RadarData target = {
                         ctx.userHistory.cumulativeRisk,
                         ctx.userHistory.cumulativeNovelty,
@@ -254,15 +254,15 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 ctx.selectedMenuIndex = 0;
             } else if (key == KeyInput::UP || key == KeyInput::DOWN) {
                 ctx.state = AppState::MY_PROFILE_CLEAR_CONFIRM;
-                ctx.selectedMenuIndex = 1; // 默认选中 1 (取消)
+                ctx.selectedMenuIndex = 1;
             }
             break;
 
         case AppState::MY_PROFILE_CLEAR_CONFIRM:
             if (key == KeyInput::LEFT || key == KeyInput::UP) {
-                ctx.selectedMenuIndex = 0; // 1. 清空 (CLEAR)
+                ctx.selectedMenuIndex = 0;
             } else if (key == KeyInput::RIGHT || key == KeyInput::DOWN) {
-                ctx.selectedMenuIndex = 1; // 2. 取消 (CANCEL)
+                ctx.selectedMenuIndex = 1;
             } else if (key == KeyInput::ENTER) {
                 if (ctx.selectedMenuIndex == 0) {
                     ctx.userHistory.totalPlays = 0;
@@ -292,7 +292,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
             }
             break;
 
-        case AppState::BUILDER_WHO: { // Step 1: WHO
+        case AppState::BUILDER_WHO: {
             int idx = ctx.selectedMenuIndex;
             if (key == KeyInput::LEFT) {
                 if (idx % 2 == 1) idx--;
@@ -316,7 +316,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
             break;
         }
 
-        case AppState::BUILDER_SITUATION: { // Step 2: SITUATION
+        case AppState::BUILDER_SITUATION: {
             int idx = ctx.selectedMenuIndex;
             if (key == KeyInput::LEFT) {
                 if (idx % 2 == 1) idx--;
@@ -340,7 +340,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
             break;
         }
 
-        case AppState::BUILDER_CONDITION: { // Step 3: CONDITION
+        case AppState::BUILDER_CONDITION: {
             int idx = ctx.selectedMenuIndex;
             if (key == KeyInput::LEFT) {
                 if (idx % 2 == 1) idx--;
@@ -364,7 +364,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
             break;
         }
 
-        case AppState::BUILDER_TENSION: { // Step 4: TENSION
+        case AppState::BUILDER_TENSION: {
             int idx = ctx.selectedMenuIndex;
             if (key == KeyInput::LEFT) {
                 if (idx % 2 == 1) idx--;
@@ -440,6 +440,18 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
         case AppState::YOUR_MATCH:
             if (key == KeyInput::ENTER) {
+                // 【核心修复】: 按 ENTER 先进入 AppState::SUMMARY (16 人格模拟分支汇总屏)
+                ctx.state = AppState::SUMMARY;
+                ctx.selectedMenuIndex = 0;
+            } else if (key == KeyInput::BACK) {
+                ctx.state = AppState::HOME;
+                ctx.selectedMenuIndex = 0;
+            }
+            break;
+
+        case AppState::SUMMARY:
+            if (key == KeyInput::ENTER) {
+                // 【核心修复】: 在 SUMMARY 按 ENTER 再进入 AppState::EXPLORE (浏览 16 型人格)
                 ctx.state = AppState::EXPLORE;
                 ctx.exploreIndex = static_cast<int>(ctx.closestMBTI);
 
@@ -447,8 +459,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
                 startRadarAnimation(ctx, target, now);
             } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::HOME;
-                ctx.selectedMenuIndex = 0;
+                ctx.state = AppState::YOUR_MATCH;
             }
             break;
 
@@ -470,12 +481,11 @@ void handleInput(UIContext& ctx, KeyInput key) {
                     ctx.state = AppState::BUILDER_PREVIEW;
                 }
             } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::YOUR_MATCH;
+                ctx.state = AppState::SUMMARY; // 返回到分支汇总
             }
             break;
 
         case AppState::SIMULATING:
-        case AppState::SUMMARY:
         case AppState::BIGGEST_SPLIT:
             if (key == KeyInput::ENTER) {
                 ctx.state = AppState::EXPLORE;

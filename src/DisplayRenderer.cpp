@@ -206,7 +206,6 @@ void renderUI(const UIContext& ctx) {
         case AppState::MY_PROFILE: {
             drawHeader(isCN ? "真实长效 MBTI 画板" : "MY LONG-TERM PROFILE", isCN);
 
-            // 统一亮绿色连线 GREEN
             drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -384,7 +383,6 @@ void renderUI(const UIContext& ctx) {
         case AppState::YOUR_MATCH: {
             drawHeader(isCN ? "你的决策轮廓" : "YOUR DECISION PROFILE", isCN);
             
-            // 统一亮绿色连线 GREEN
             drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -434,13 +432,68 @@ void renderUI(const UIContext& ctx) {
             break;
         }
 
+        case AppState::SUMMARY: {
+            // 【全量恢复与美化】: 16 人格模拟分支汇总统计屏 (带有 3 色条形占比槽)
+            drawHeader(isCN ? "16 人格模拟分支汇总" : "PARALLEL BRANCH SUMMARY", isCN);
+
+            if (isCN) canvas.setFont(&fonts::efontCN_12);
+            else canvas.setFont(&fonts::Font0);
+
+            float yesPct = (ctx.summary.yesCount * 100.0f) / 16.0f;
+            float noPct = (ctx.summary.noCount * 100.0f) / 16.0f;
+            float maybePct = (ctx.summary.maybeCount * 100.0f) / 16.0f;
+
+            // 1. 同意 (YES) 柱状统计 (Y = 32)
+            canvas.setCursor(6, 34);
+            canvas.setTextColor(GREEN, BLACK);
+            canvas.printf(isCN ? "同意 %d人" : "YES %d", ctx.summary.yesCount);
+            int yesBarW = static_cast<int>(120.0f * (yesPct / 100.0f));
+            canvas.fillRect(82, 34, 120, 12, DARKGREY);
+            if (yesBarW > 0) canvas.fillRect(82, 34, yesBarW, 12, GREEN);
+            canvas.setCursor(206, 34);
+            canvas.printf("%.0f%%", yesPct);
+
+            // 2. 拒绝 (NO) 柱状统计 (Y = 58)
+            canvas.setCursor(6, 60);
+            canvas.setTextColor(RED, BLACK);
+            canvas.printf(isCN ? "拒绝 %d人" : "NO  %d", ctx.summary.noCount);
+            int noBarW = static_cast<int>(120.0f * (noPct / 100.0f));
+            canvas.fillRect(82, 60, 120, 12, DARKGREY);
+            if (noBarW > 0) canvas.fillRect(82, 60, noBarW, 12, RED);
+            canvas.setCursor(206, 60);
+            canvas.printf("%.0f%%", noPct);
+
+            // 3. 犹豫 (MAYBE) 柱状统计 (Y = 84)
+            canvas.setCursor(6, 86);
+            canvas.setTextColor(YELLOW, BLACK);
+            canvas.printf(isCN ? "犹豫 %d人" : "MAY %d", ctx.summary.maybeCount);
+            int maybeBarW = static_cast<int>(120.0f * (maybePct / 100.0f));
+            canvas.fillRect(82, 86, 120, 12, DARKGREY);
+            if (maybeBarW > 0) canvas.fillRect(82, 86, maybeBarW, 12, YELLOW);
+            canvas.setCursor(206, 86);
+            canvas.printf("%.0f%%", maybePct);
+
+            // 4. 阵营分布结论概览 (Y = 110)
+            canvas.setCursor(6, 110);
+            canvas.setTextColor(CYAN, BLACK);
+            if (ctx.summary.yesCount >= 10) {
+                canvas.print(isCN ? "主流阵营: 绝对压倒性同意" : "DOMINANT: OVERWHELMING YES");
+            } else if (ctx.summary.noCount >= 10) {
+                canvas.print(isCN ? "主流阵营: 绝对压倒性拒绝" : "DOMINANT: OVERWHELMING NO");
+            } else if (ctx.summary.yesCount >= 6 && ctx.summary.noCount >= 6) {
+                canvas.print(isCN ? "阵营格局: 剧烈意见撕裂分歧" : "STATUS: INTENSELY SPLIT");
+            } else {
+                canvas.print(isCN ? "阵营格局: 观点分布较为多元" : "STATUS: DIVERSED VIEWS");
+            }
+            break;
+        }
+
         case AppState::EXPLORE: {
             const DecisionResult& res = ctx.results[ctx.exploreIndex];
             char headerTitle[32];
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle, isCN);
 
-            // 【全界面统一】将 lineColor 统一修正为亮绿色 GREEN！
             drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -497,7 +550,6 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::SIMULATING:
-        case AppState::SUMMARY:
         case AppState::BIGGEST_SPLIT:
             break;
     }
