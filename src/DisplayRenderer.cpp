@@ -60,20 +60,6 @@ static void drawHeader(const char* title, bool isCN) {
     canvas.print(title);
     canvas.drawLine(0, 22, 240, 22, GREEN);
 }
-
-static void drawFooter(const char* hint, bool isCN) {
-    canvas.setTextColor(0x7BEF, BLACK); // 低调淡灰色
-    if (isCN) {
-        canvas.setFont(&fonts::efontCN_12);
-        canvas.setTextSize(1);
-        canvas.setCursor(5, 122);
-    } else {
-        canvas.setFont(&fonts::Font0);
-        canvas.setTextSize(1);
-        canvas.setCursor(5, 123);
-    }
-    canvas.print(hint);
-}
 #endif
 
 void renderUI(const UIContext& ctx) {
@@ -97,21 +83,19 @@ void renderUI(const UIContext& ctx) {
 
             if (ctx.selectedMenuIndex == 0) {
                 canvas.setTextColor(CYAN, BLACK);
-                canvas.setCursor(30, 48);
+                canvas.setCursor(30, 52);
                 canvas.print("> 1. 中文 (Simplified Chinese)");
                 canvas.setTextColor(WHITE, BLACK);
-                canvas.setCursor(30, 78);
+                canvas.setCursor(30, 85);
                 canvas.print("  2. English (US)");
             } else {
                 canvas.setTextColor(WHITE, BLACK);
-                canvas.setCursor(30, 48);
+                canvas.setCursor(30, 52);
                 canvas.print("  1. 中文 (Simplified Chinese)");
                 canvas.setTextColor(CYAN, BLACK);
-                canvas.setCursor(30, 78);
+                canvas.setCursor(30, 85);
                 canvas.print("> 2. English (US)");
             }
-
-            drawFooter("[左右/上下] 移动  [ENTER] 确认并保存", true);
             break;
         }
 
@@ -139,7 +123,7 @@ void renderUI(const UIContext& ctx) {
             // 图层 1 & 2: 48px 巨幅雷达 Logo (中心点 120, 55)
             drawRadarChart(canvas, 120, 55, 48, homeData, GREEN, DARKCYAN, false, isCN);
 
-            // 图层 3: 开机选项下移至 Y = 118 贴近底部
+            // 图层 3: 开机三选项贴底排版
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
@@ -196,7 +180,7 @@ void renderUI(const UIContext& ctx) {
                     canvas.setCursor(84, yPos);
                     canvas.print(">[2. CREATE]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(168, yPos);
+                    canvas.setCursor(162, yPos);
                     canvas.print(" [3. PROFILE]");
                 } else {
                     canvas.setTextColor(0x7BEF, BLACK);
@@ -247,15 +231,13 @@ void renderUI(const UIContext& ctx) {
             canvas.printf(isCN ? "置信度: %.1f%%" : "Confid : %.1f%%", ctx.userHistory.dominantSimilarity);
 
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(6, 80);
+            canvas.setCursor(6, 82);
             canvas.printf(isCN ? "已测场数: %d 场" : "Tested : %d", ctx.userHistory.totalPlays);
 
             canvas.setTextColor(0x7BEF, BLACK);
-            canvas.setCursor(6, 96);
+            canvas.setCursor(6, 100);
             canvas.printf(isCN ? "同意%d 拒绝%d 犹豫%d" : "Y:%d N:%d M:%d",
                           ctx.userHistory.yesCount, ctx.userHistory.noCount, ctx.userHistory.maybeCount);
-
-            drawFooter(isCN ? "[ENTER/ESC] 返回  [上下] 清空" : "[ENTER/ESC] Back  [UP/DN] Clear", isCN);
             break;
         }
 
@@ -267,26 +249,24 @@ void renderUI(const UIContext& ctx) {
 
             canvas.setTextSize(1);
             canvas.setTextColor(RED, BLACK);
-            canvas.setCursor(10, 32);
+            canvas.setCursor(10, 36);
             canvas.print(isCN ? "确定擦除所有决策历史与真实人格吗？" : "Clear all decision history & profile?");
 
             if (ctx.selectedMenuIndex == 0) {
                 canvas.setTextColor(RED, BLACK);
-                canvas.setCursor(20, 60);
+                canvas.setCursor(20, 66);
                 canvas.print(isCN ? "> [ 1. ⚠️ 清空历史 (CLEAR) ]" : "> [ 1. CLEAR ALL HISTORY ]");
                 canvas.setTextColor(WHITE, BLACK);
-                canvas.setCursor(20, 88);
+                canvas.setCursor(20, 96);
                 canvas.print(isCN ? "  [ 2. 🛡️ 取消保留 (CANCEL) ]" : "  [ 2. CANCEL ]");
             } else {
                 canvas.setTextColor(WHITE, BLACK);
-                canvas.setCursor(20, 60);
+                canvas.setCursor(20, 66);
                 canvas.print(isCN ? "  [ 1. ⚠️ 清空历史 (CLEAR) ]" : "  [ 1. CLEAR ALL HISTORY ]");
                 canvas.setTextColor(GREEN, BLACK);
-                canvas.setCursor(20, 88);
+                canvas.setCursor(20, 96);
                 canvas.print(isCN ? "> [ 2. 🛡️ 取消保留 (CANCEL) ]" : "> [ 2. CANCEL ]");
             }
-
-            drawFooter(isCN ? "[方向] 选择  [ENTER] 确认执行" : "[ARR] Select  [ENTER] Confirm", isCN);
             break;
         }
 
@@ -316,11 +296,12 @@ void renderUI(const UIContext& ctx) {
                 for (int i = 0; i < 6; ++i) items[i] = getTensionName(static_cast<TensionType>(i), isCN);
             }
 
+            // 纵向分布扩宽，拉开至 34, 66, 98，利用释放的底部空间
             for (int i = 0; i < count; ++i) {
                 int col = i % 2;
                 int row = i / 2;
                 int x = (col == 0) ? 6 : 122;
-                int y = 30 + row * 28;
+                int y = 34 + row * 32;
 
                 if (isCN) {
                     canvas.setFont(&fonts::efontCN_12);
@@ -339,8 +320,6 @@ void renderUI(const UIContext& ctx) {
                     canvas.printf("  %s %s", icons[i % 6], items[i]);
                 }
             }
-
-            drawFooter(isCN ? "[方向] 2D选择 [ENTER] 确定 [ESC] 返回" : "[ARR] 2D Move [ENTER] Select [ESC] Back", isCN);
             break;
         }
 
@@ -363,9 +342,9 @@ void renderUI(const UIContext& ctx) {
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             int lineY = 46;
-            while (*desc && lineY <= 102) {
+            // 底部限制完全解封至 lineY <= 120 (可多容纳 2 行文字，绝不截断描述剧情)
+            while (*desc && lineY <= 120) {
                 char buf[64] = {0};
-                // 扩宽至整屏全宽：中文每行可容纳 18 个汉字 = 54 字节 (216px)，英文 37 个字符
                 int takeBytes = getSafeUTF8Break(desc, isCN ? 54 : 37);
                 strncpy(buf, desc, takeBytes);
                 buf[takeBytes] = '\0';
@@ -374,8 +353,6 @@ void renderUI(const UIContext& ctx) {
                 desc += takeBytes;
                 lineY += 15;
             }
-
-            drawFooter(isCN ? "[ENTER] 做出选择  [ESC] 修改/返回" : "[ENTER] MAKE DECISION  [ESC] EDIT", isCN);
             break;
         }
 
@@ -392,7 +369,8 @@ void renderUI(const UIContext& ctx) {
                     canvas.setTextSize(2);
                 }
 
-                canvas.setCursor(10, 38 + i * 26);
+                // 选项间距垂直纵向舒展分布于 36, 66, 96
+                canvas.setCursor(10, 36 + i * 30);
                 const char* txt = isCN ? choicesCN[i] : choices[i];
                 if (i == ctx.selectedMenuIndex) {
                     canvas.setTextColor(GREEN, BLACK);
@@ -402,7 +380,6 @@ void renderUI(const UIContext& ctx) {
                     canvas.printf("  %s", txt);
                 }
             }
-            drawFooter(isCN ? "[上下] 移动  [ENTER] 确认选择" : "[UP/DN] Move  [ENTER] Confirm", isCN);
             break;
         }
 
@@ -430,13 +407,13 @@ void renderUI(const UIContext& ctx) {
 
             canvas.setTextSize(1);
             canvas.setTextColor(0x7BEF, BLACK);
-            canvas.setCursor(6, 60);
+            canvas.setCursor(6, 62);
             canvas.print(isCN ? "最大分歧:" : "BIGGEST DIFF:");
 
             canvas.setFont(&fonts::Font0);
             canvas.setTextSize(1);
             canvas.setTextColor(RED, BLACK);
-            canvas.setCursor(6, 74);
+            canvas.setCursor(6, 76);
             const char* diffDecTxt = isCN ? getDecisionNameCN(ctx.biggestDiffDecision) : getDecisionName(ctx.biggestDiffDecision);
             canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
 
@@ -445,7 +422,7 @@ void renderUI(const UIContext& ctx) {
 
             canvas.setTextSize(1);
             canvas.setTextColor(CYAN, BLACK);
-            canvas.setCursor(6, 94);
+            canvas.setCursor(6, 98);
             const char* myDecTxt = isCN ? getDecisionNameCN(ctx.userChoice) : getDecisionName(ctx.userChoice);
             canvas.printf(isCN ? "你的选择: %s" : "YOURS: %s", myDecTxt);
 
@@ -455,8 +432,6 @@ void renderUI(const UIContext& ctx) {
                 canvas.setCursor(185, 5);
                 canvas.printf("PLS:%d", ctx.totalPlays);
             }
-
-            drawFooter(isCN ? "[ENTER] 探索 16 人格 >  [ESC] 首页" : "[ENTER] EXPLORE 16 MBTI >  [ESC] HOME", isCN);
             break;
         }
 
@@ -505,7 +480,8 @@ void renderUI(const UIContext& ctx) {
 
             const char* pReason = isCN ? getDecisionReasonCN(res.reason) : res.reason;
             int lineY = 79;
-            while (*pReason && lineY <= 105) {
+            // 依据文字展示限制解封拓展至 lineY <= 120，完整展现丰富的大段分析
+            while (*pReason && lineY <= 120) {
                 char lineBuf[28] = {0};
                 int maxB = isCN ? 21 : 16;
                 int takeBytes = getSafeUTF8Break(pReason, maxB);
@@ -518,8 +494,6 @@ void renderUI(const UIContext& ctx) {
                 canvas.print(lineBuf);
                 lineY += 13;
             }
-
-            drawFooter(isCN ? "[左右] 切换  [ENTER] 下一个场景" : "[L/R] Switch  [ENTER] NEXT SCENARIO", isCN);
             break;
         }
 
