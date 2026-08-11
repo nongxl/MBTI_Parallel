@@ -58,10 +58,16 @@ void loop() {
         delay(150); // 防抖
     }
 
-    // 模拟动画进行中时，不断更新进度条帧
+    // 1. 模拟动画进行中时，不断刷新 16 分支进度条
     if (g_uiContext.state == AppState::SIMULATING) {
         renderUI(g_uiContext);
         delay(30);
+    }
+
+    // 2. 当六维雷达图形变补间插值动画进行中时，保持 ~50fps 高帧率平滑重绘
+    if (g_uiContext.isRadarAnimActive) {
+        renderUI(g_uiContext);
+        delay(20);
     }
 
     delay(10);

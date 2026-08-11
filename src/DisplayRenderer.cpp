@@ -73,7 +73,7 @@ void renderUI(const UIContext& ctx) {
 
             drawHeader(title);
 
-            // 显示 4~6 个带几何图标符号的科技感选项列表
+            // 2D 网格排列（充分利用 240px 屏幕宽度，支持上下左右 4 方向选择）
             int count = 0;
             const char* items[8];
             const char* icons[] = { "◇", "○", "△", "□", "☆", "⬡" };
@@ -95,23 +95,40 @@ void renderUI(const UIContext& ctx) {
                 items[0]="EXPERIENCE"; items[1]="PRACTICAL"; items[2]="PEOPLE"; items[3]="SAFETY";
             }
 
-            int visibleStart = 0;
-            if (ctx.selectedMenuIndex >= 3) {
-                visibleStart = ctx.selectedMenuIndex - 2;
-            }
+            if (ctx.state == AppState::BUILDER_INTENSITY) {
+                // 3列 1行 水平横向网格
+                for (int i = 0; i < count; ++i) {
+                    canvas.setTextSize(2);
+                    canvas.setCursor(6 + i * 76, 50);
+                    if (i == ctx.selectedMenuIndex) {
+                        canvas.setTextColor(CYAN, BLACK);
+                        canvas.printf(">%s", items[i]);
+                    } else {
+                        canvas.setTextColor(WHITE, BLACK);
+                        canvas.printf(" %s", items[i]);
+                    }
+                }
+            } else {
+                // 2列 多行 双栏 2D 网格
+                for (int i = 0; i < count; ++i) {
+                    int col = i % 2;
+                    int row = i / 2;
+                    int x = (col == 0) ? 6 : 124;
+                    int y = 30 + row * 28;
 
-            for (int i = visibleStart; i < count && i < visibleStart + 3; ++i) {
-                canvas.setTextSize(2);
-                canvas.setCursor(10, 32 + (i - visibleStart) * 28);
-                if (i == ctx.selectedMenuIndex) {
-                    canvas.setTextColor(CYAN, BLACK);
-                    canvas.printf("> %s %s", icons[i % 6], items[i]);
-                } else {
-                    canvas.setTextColor(WHITE, BLACK);
-                    canvas.printf("  %s %s", icons[i % 6], items[i]);
+                    canvas.setTextSize(2);
+                    canvas.setCursor(x, y);
+                    if (i == ctx.selectedMenuIndex) {
+                        canvas.setTextColor(CYAN, BLACK);
+                        canvas.printf("> %s %s", icons[i % 6], items[i]);
+                    } else {
+                        canvas.setTextColor(WHITE, BLACK);
+                        canvas.printf("  %s %s", icons[i % 6], items[i]);
+                    }
                 }
             }
-            drawFooter("[UP/DN] Move [ENTER] Select [ESC] Back");
+
+            drawFooter("[ARR] 2D Move [ENTER] Select [ESC] Back");
             break;
         }
 
@@ -128,7 +145,7 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 80);
             canvas.printf("Priority: %s\n", getPriorityName(ctx.currentSelection.priority));
 
-            // 右侧抽象预览雷达图放大 (radius = 32)
+            // 右侧抽象预览雷达图
             RadarData prevData = {
                 ctx.currentScenario.risk,
                 ctx.currentScenario.novelty,
@@ -150,7 +167,7 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(20, 36);
             canvas.print("16 BRANCHES");
 
-            // 绘制辐射线框与进度点阵动画
+            // 绘制进度条
             int barWidth = (int)(ctx.animProgress * 1.9f);
             canvas.drawRect(20, 72, 200, 16, GREEN);
             canvas.fillRect(22, 74, barWidth > 196 ? 196 : barWidth, 12, CYAN);
@@ -190,7 +207,6 @@ void renderUI(const UIContext& ctx) {
         case AppState::BIGGEST_SPLIT: {
             drawHeader("BIGGEST SPLIT");
             
-            // 放大左/右两个对比雷达图 (radius = 28)
             const PersonalityProfile& yesProf = getMBTIProfile(ctx.splitYesType);
             RadarData yesData = { yesProf.risk, yesProf.novelty, yesProf.logic, yesProf.social, yesProf.planning, yesProf.practicality };
             drawRadarChart(canvas, 55, 62, 28, yesData, GREEN, DARKCYAN, false);
@@ -224,10 +240,9 @@ void renderUI(const UIContext& ctx) {
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle);
 
-            // 右侧区域(centerX = 180, centerY = 68, radius = 35): 绘制更放大的六维极坐标雷达图！
-            const PersonalityProfile& pProf = getMBTIProfile(res.personality);
-            RadarData mbtiData = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
-            drawRadarChart(canvas, 180, 68, 35, mbtiData, CYAN, DARKCYAN, true);
+            // 右侧区域(centerX = 180, centerY = 68, radius = 35):
+            // 使用补间插值算法实时计算出来的 ctx.currentRadar 绘制！实现极具视觉冲击力的平滑形变效果！
+            drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, CYAN, DARKCYAN, true);
 
             // 左侧区域 (X限制在 6 ~ 125 以内，完全不与右侧雷达图重叠)
             // 1. Choice 行
@@ -252,7 +267,7 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 50);
             canvas.printf("Score : %.1f", res.score);
 
-            // 3. Reason 标题与两行按字符数智能安全切割 (每行 <= 16 字符)
+            // 3. Reason 标题与两行切割
             canvas.setCursor(6, 66);
             canvas.setTextColor(CYAN, BLACK);
             canvas.print("Reason:");
@@ -311,18 +326,10 @@ void renderUI(const UIContext& ctx) {
         case AppState::YOUR_MATCH: {
             drawHeader("YOUR DECISION PROFILE");
             
-            // 左侧(centerX = 62, centerY = 68, radius = 35): 绘制更放大的用户决策轮廓雷达图！
-            RadarData uData = {
-                ctx.userProfile.risk,
-                ctx.userProfile.novelty,
-                ctx.userProfile.logic,
-                ctx.userProfile.social,
-                ctx.userProfile.planning,
-                ctx.userProfile.practicality
-            };
-            drawRadarChart(canvas, 62, 68, 35, uData, GREEN, DARKGREEN, true);
+            // 左侧使用补间插值后的 ctx.currentRadar 绘制
+            drawRadarChart(canvas, 62, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true);
 
-            // 右侧区域 (X = 128 ~ 235): 精致排列匹配信息
+            // 右侧区域 (X = 128 ~ 235)
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(128, 32);

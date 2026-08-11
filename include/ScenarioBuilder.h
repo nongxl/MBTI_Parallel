@@ -1,6 +1,16 @@
 #ifndef SCENARIO_BUILDER_H
 #define SCENARIO_BUILDER_H
 
+#ifdef LOW
+#undef LOW
+#endif
+#ifdef HIGH
+#undef HIGH
+#endif
+#ifdef CHANGE
+#undef CHANGE
+#endif
+
 #include "Scenario.h"
 
 enum class Motivation {

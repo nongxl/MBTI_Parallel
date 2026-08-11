@@ -3,6 +3,29 @@
 #include "DisplayRenderer.h"
 #include "DecisionProfile.h"
 
+#ifdef ARDUINO
+#include <Arduino.h>
+#else
+static uint32_t millis() { return 0; }
+#endif
+
+#ifdef LOW
+#undef LOW
+#endif
+#ifdef HIGH
+#undef HIGH
+#endif
+#ifdef CHANGE
+#undef CHANGE
+#endif
+
+static void startRadarAnimation(UIContext& ctx, const RadarData& targetData, uint32_t currentMillis) {
+    ctx.startRadar = ctx.currentRadar;
+    ctx.endRadar = targetData;
+    ctx.radarAnimStartTime = currentMillis;
+    ctx.isRadarAnimActive = true;
+}
+
 void initApp(UIContext& ctx) {
     ctx.state = AppState::HOME;
     ctx.selectedMenuIndex = 0;
@@ -10,6 +33,13 @@ void initApp(UIContext& ctx) {
     ctx.userChoice = Decision::YES;
     ctx.animStartTime = 0;
     ctx.animProgress = 0;
+
+    // 雷达插值变量初始化
+    ctx.isRadarAnimActive = false;
+    ctx.radarAnimStartTime = 0;
+    ctx.currentRadar = { 75.0f, 90.0f, 60.0f, 85.0f, 40.0f, 70.0f };
+    ctx.startRadar = ctx.currentRadar;
+    ctx.endRadar = ctx.currentRadar;
 
     // 默认初始 Selection
     ctx.currentSelection.decisionType = DecisionType::GET;
@@ -24,6 +54,7 @@ void initApp(UIContext& ctx) {
 }
 
 void updateApp(UIContext& ctx, uint32_t currentMillis) {
+    // 1. 处理模拟分支进度条动效
     if (ctx.state == AppState::SIMULATING) {
         if (ctx.animStartTime == 0) {
             ctx.animStartTime = currentMillis;
@@ -44,10 +75,28 @@ void updateApp(UIContext& ctx, uint32_t currentMillis) {
             renderUI(ctx); // 自动完成后，立即强制重绘，呈现 SUMMARY 汇总界面
         }
     }
+
+    // 2. 处理六维雷达极坐标平滑补间形变插值 (250ms 形变)
+    if (ctx.isRadarAnimActive) {
+        uint32_t elapsed = currentMillis - ctx.radarAnimStartTime;
+        float t = elapsed / 250.0f;
+        if (t >= 1.0f) {
+            t = 1.0f;
+            ctx.isRadarAnimActive = false;
+        }
+
+        ctx.currentRadar.risk = ctx.startRadar.risk + (ctx.endRadar.risk - ctx.startRadar.risk) * t;
+        ctx.currentRadar.novelty = ctx.startRadar.novelty + (ctx.endRadar.novelty - ctx.startRadar.novelty) * t;
+        ctx.currentRadar.logic = ctx.startRadar.logic + (ctx.endRadar.logic - ctx.startRadar.logic) * t;
+        ctx.currentRadar.social = ctx.startRadar.social + (ctx.endRadar.social - ctx.startRadar.social) * t;
+        ctx.currentRadar.planning = ctx.startRadar.planning + (ctx.endRadar.planning - ctx.startRadar.planning) * t;
+        ctx.currentRadar.practicality = ctx.startRadar.practicality + (ctx.endRadar.practicality - ctx.startRadar.practicality) * t;
+    }
 }
 
 void handleInput(UIContext& ctx, KeyInput key) {
     if (key == KeyInput::NONE) return;
+    uint32_t now = millis();
 
     switch (ctx.state) {
         case AppState::HOME:
@@ -57,90 +106,131 @@ void handleInput(UIContext& ctx, KeyInput key) {
             }
             break;
 
-        case AppState::BUILDER_TYPE:
-            if (key == KeyInput::UP) {
-                ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 5) % 6;
+        case AppState::BUILDER_TYPE: {
+            int idx = ctx.selectedMenuIndex;
+            if (key == KeyInput::LEFT) {
+                if (idx % 2 == 1) idx--;
+            } else if (key == KeyInput::RIGHT) {
+                if (idx % 2 == 0 && idx + 1 < 6) idx++;
+            } else if (key == KeyInput::UP) {
+                if (idx >= 2) idx -= 2;
             } else if (key == KeyInput::DOWN) {
-                ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 1) % 6;
+                if (idx + 2 < 6) idx += 2;
             } else if (key == KeyInput::ENTER) {
                 DecisionType types[] = { DecisionType::GET, DecisionType::GO, DecisionType::DO, DecisionType::SAY, DecisionType::CHOOSE, DecisionType::CHANGE };
-                ctx.currentSelection.decisionType = types[ctx.selectedMenuIndex];
+                ctx.currentSelection.decisionType = types[idx];
                 ctx.state = AppState::BUILDER_MOTIVATION;
                 ctx.selectedMenuIndex = 0;
+                return;
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::HOME;
                 ctx.selectedMenuIndex = 0;
+                return;
             }
+            ctx.selectedMenuIndex = idx;
             break;
+        }
 
-        case AppState::BUILDER_MOTIVATION:
-            if (key == KeyInput::UP) {
-                ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 4) % 5;
+        case AppState::BUILDER_MOTIVATION: {
+            int idx = ctx.selectedMenuIndex;
+            if (key == KeyInput::LEFT) {
+                if (idx % 2 == 1) idx--;
+            } else if (key == KeyInput::RIGHT) {
+                if (idx % 2 == 0 && idx + 1 < 5) idx++;
+            } else if (key == KeyInput::UP) {
+                if (idx >= 2) idx -= 2;
             } else if (key == KeyInput::DOWN) {
-                ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 1) % 5;
+                if (idx + 2 < 5) idx += 2;
             } else if (key == KeyInput::ENTER) {
                 Motivation m[] = { Motivation::WANT, Motivation::NEED, Motivation::CURIOUS, Motivation::FUN, Motivation::OPPORTUNITY };
-                ctx.currentSelection.motivation = m[ctx.selectedMenuIndex];
+                ctx.currentSelection.motivation = m[idx];
                 ctx.state = AppState::BUILDER_CONCERN;
                 ctx.selectedMenuIndex = 0;
+                return;
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::BUILDER_TYPE;
                 ctx.selectedMenuIndex = 0;
+                return;
             }
+            ctx.selectedMenuIndex = idx;
             break;
+        }
 
-        case AppState::BUILDER_CONCERN:
-            if (key == KeyInput::UP) {
-                ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 5) % 6;
+        case AppState::BUILDER_CONCERN: {
+            int idx = ctx.selectedMenuIndex;
+            if (key == KeyInput::LEFT) {
+                if (idx % 2 == 1) idx--;
+            } else if (key == KeyInput::RIGHT) {
+                if (idx % 2 == 0 && idx + 1 < 6) idx++;
+            } else if (key == KeyInput::UP) {
+                if (idx >= 2) idx -= 2;
             } else if (key == KeyInput::DOWN) {
-                ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 1) % 6;
+                if (idx + 2 < 6) idx += 2;
             } else if (key == KeyInput::ENTER) {
                 Concern c[] = { Concern::RISK, Concern::COST, Concern::TIME, Concern::EFFORT, Concern::UNKNOWN, Concern::NONE };
-                ctx.currentSelection.concern = c[ctx.selectedMenuIndex];
+                ctx.currentSelection.concern = c[idx];
                 ctx.state = AppState::BUILDER_INTENSITY;
                 ctx.selectedMenuIndex = 0;
+                return;
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::BUILDER_MOTIVATION;
                 ctx.selectedMenuIndex = 0;
+                return;
             }
+            ctx.selectedMenuIndex = idx;
             break;
+        }
 
-        case AppState::BUILDER_INTENSITY:
-            if (key == KeyInput::UP) {
-                ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 2) % 3;
-            } else if (key == KeyInput::DOWN) {
-                ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 1) % 3;
+        case AppState::BUILDER_INTENSITY: {
+            int idx = ctx.selectedMenuIndex;
+            if (key == KeyInput::LEFT) {
+                if (idx > 0) idx--;
+            } else if (key == KeyInput::RIGHT) {
+                if (idx < 2) idx++;
             } else if (key == KeyInput::ENTER) {
                 Intensity intens[] = { Intensity::LOW, Intensity::MEDIUM, Intensity::HIGH };
-                ctx.currentSelection.intensity = intens[ctx.selectedMenuIndex];
+                ctx.currentSelection.intensity = intens[idx];
                 ctx.state = AppState::BUILDER_PRIORITY;
                 ctx.selectedMenuIndex = 0;
+                return;
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::BUILDER_CONCERN;
                 ctx.selectedMenuIndex = 0;
+                return;
             }
+            ctx.selectedMenuIndex = idx;
             break;
+        }
 
-        case AppState::BUILDER_PRIORITY:
-            if (key == KeyInput::UP) {
-                ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 3) % 4;
+        case AppState::BUILDER_PRIORITY: {
+            int idx = ctx.selectedMenuIndex;
+            if (key == KeyInput::LEFT) {
+                if (idx % 2 == 1) idx--;
+            } else if (key == KeyInput::RIGHT) {
+                if (idx % 2 == 0 && idx + 1 < 4) idx++;
+            } else if (key == KeyInput::UP) {
+                if (idx >= 2) idx -= 2;
             } else if (key == KeyInput::DOWN) {
-                ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 1) % 4;
+                if (idx + 2 < 4) idx += 2;
             } else if (key == KeyInput::ENTER) {
                 Priority p[] = { Priority::EXPERIENCE, Priority::PRACTICAL, Priority::PEOPLE, Priority::SAFETY };
-                ctx.currentSelection.priority = p[ctx.selectedMenuIndex];
+                ctx.currentSelection.priority = p[idx];
                 ctx.currentScenario = buildScenario(ctx.currentSelection);
                 ctx.state = AppState::BUILDER_PREVIEW;
+                return;
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::BUILDER_INTENSITY;
                 ctx.selectedMenuIndex = 0;
+                return;
             }
+            ctx.selectedMenuIndex = idx;
             break;
+        }
 
         case AppState::BUILDER_PREVIEW:
             if (key == KeyInput::ENTER) {
                 ctx.state = AppState::SIMULATING;
-                ctx.animStartTime = 0; // 标记在 updateApp 中自动设为当下的 currentMillis
+                ctx.animStartTime = 0;
                 ctx.animProgress = 0;
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::BUILDER_PRIORITY;
@@ -149,7 +239,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
             break;
 
         case AppState::SIMULATING:
-            // 自动流转，不响应该阶段按键输入
+            // 自动流转
             break;
 
         case AppState::SUMMARY:
@@ -161,15 +251,29 @@ void handleInput(UIContext& ctx, KeyInput key) {
         case AppState::BIGGEST_SPLIT:
             if (key == KeyInput::ENTER || key == KeyInput::RIGHT) {
                 ctx.state = AppState::EXPLORE;
-                ctx.exploreIndex = static_cast<int>(ctx.splitYesType); // 优先定位 Biggest Split 的 YES 型
+                ctx.exploreIndex = static_cast<int>(ctx.splitYesType);
+
+                // 初始化 Explore 屏的雷达形态
+                const PersonalityProfile& pProf = getMBTIProfile(ctx.results[ctx.exploreIndex].personality);
+                RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
+                ctx.currentRadar = target;
+                ctx.startRadar = target;
+                ctx.endRadar = target;
+                ctx.isRadarAnimActive = false;
             }
             break;
 
         case AppState::EXPLORE:
-            if (key == KeyInput::LEFT) {
-                ctx.exploreIndex = (ctx.exploreIndex + 15) % 16;
-            } else if (key == KeyInput::RIGHT) {
-                ctx.exploreIndex = (ctx.exploreIndex + 1) % 16;
+            if (key == KeyInput::LEFT || key == KeyInput::RIGHT) {
+                if (key == KeyInput::LEFT) {
+                    ctx.exploreIndex = (ctx.exploreIndex + 15) % 16;
+                } else {
+                    ctx.exploreIndex = (ctx.exploreIndex + 1) % 16;
+                }
+                // 启动雷达极坐标补间平滑过渡形变动画
+                const PersonalityProfile& pProf = getMBTIProfile(ctx.results[ctx.exploreIndex].personality);
+                RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
+                startRadarAnimation(ctx, target, now);
             } else if (key == KeyInput::ENTER) {
                 ctx.state = AppState::YOUR_CHOICE;
                 ctx.selectedMenuIndex = 0;
@@ -190,6 +294,17 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 // 计算用户的决策轮廓并匹配相近度最高的人格
                 ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
                 ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
+
+                // 启动用户 Profile 雷达图的过渡呈现
+                RadarData target = {
+                    ctx.userProfile.risk,
+                    ctx.userProfile.novelty,
+                    ctx.userProfile.logic,
+                    ctx.userProfile.social,
+                    ctx.userProfile.planning,
+                    ctx.userProfile.practicality
+                };
+                startRadarAnimation(ctx, target, now);
 
                 ctx.state = AppState::YOUR_MATCH;
             } else if (key == KeyInput::BACK) {

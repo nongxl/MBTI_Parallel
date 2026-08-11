@@ -1,6 +1,10 @@
 #ifndef SCENARIO_H
 #define SCENARIO_H
 
+#ifdef CHANGE
+#undef CHANGE
+#endif
+
 enum class DecisionType {
     GET,
     GO,

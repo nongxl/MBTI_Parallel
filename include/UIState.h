@@ -7,6 +7,7 @@
 #include "DecisionEngine.h"
 #include "ScenarioBuilder.h"
 #include "DecisionProfile.h"
+#include "RadarChart.h"
 
 enum class AppState {
     HOME,
@@ -54,6 +55,13 @@ struct UIContext {
 
     uint32_t animStartTime;
     uint32_t animProgress; // 0 ~ 100
+
+    // 雷达图平滑形变插值动效变量
+    RadarData startRadar;
+    RadarData endRadar;
+    RadarData currentRadar;
+    uint32_t radarAnimStartTime;
+    bool isRadarAnimActive;
 };
 
 #endif // UI_STATE_H
