@@ -14,6 +14,7 @@ static UIContext g_uiContext;
 #ifdef ARDUINO
 static KeyInput readCardputerKeyboard() {
     M5Cardputer.update();
+
     if (M5Cardputer.Keyboard.isKeyPressed(';')) return KeyInput::UP;     // ; 键向上
     if (M5Cardputer.Keyboard.isKeyPressed('.')) return KeyInput::DOWN;   // . 键向下
     if (M5Cardputer.Keyboard.isKeyPressed(',')) return KeyInput::LEFT;   // , 键向左
@@ -52,14 +53,23 @@ void loop() {
         renderUI(g_uiContext);
     }
 
-    // 时间戳非阻塞防抖 (避免硬 delay(150) 卡顿中断 60FPS 动画)
+    // 升级版防连击/防抖与状态切换穿透锁定算法 (State Transition Shield Lock)
     static uint32_t lastKeyPressTime = 0;
     KeyInput key = readCardputerKeyboard();
+
     if (key != KeyInput::NONE) {
-        if (currentMillis - lastKeyPressTime > 160) {
+        // 250ms 强效物理防抖冷却锁定
+        if (currentMillis - lastKeyPressTime > 250) {
             lastKeyPressTime = currentMillis;
+            AppState stateBeforeInput = g_uiContext.state;
+            
             handleInput(g_uiContext, key);
             renderUI(g_uiContext);
+
+            // 【状态切换安全防穿透锁】如果按键导致了 AppState 界面跳转，额外施加 120ms 防穿透阻尼
+            if (stateBeforeInput != g_uiContext.state) {
+                lastKeyPressTime = currentMillis + 120;
+            }
         }
     }
 
