@@ -1,4 +1,5 @@
 #include "DisplayRenderer.h"
+#include "RadarChart.h"
 #include <cstdio>
 
 #ifdef ARDUINO
@@ -22,15 +23,15 @@ static void drawHeader(const char* title) {
     canvas.fillScreen(BLACK);
     canvas.setTextColor(YELLOW, BLACK);
     canvas.setTextSize(2);
-    canvas.setCursor(5, 5);
+    canvas.setCursor(5, 4);
     canvas.print(title);
-    canvas.drawLine(0, 25, 240, 25, GREEN);
+    canvas.drawLine(0, 23, 240, 23, GREEN);
 }
 
 static void drawFooter(const char* hint) {
     canvas.setTextColor(LIGHTGREY, BLACK);
     canvas.setTextSize(1);
-    canvas.setCursor(5, 122);
+    canvas.setCursor(5, 123);
     canvas.print(hint);
 }
 #endif
@@ -39,21 +40,21 @@ void renderUI(const UIContext& ctx) {
 #ifdef ARDUINO
     switch (ctx.state) {
         case AppState::HOME: {
-            drawHeader("PARALLEL MBTI");
-            const char* options[] = { "1. DECIDE (Custom)", "2. RANDOM (Preset)" };
-            for (int i = 0; i < 2; ++i) {
-                canvas.setTextSize(2);
-                canvas.setCursor(10, 40 + i * 30);
-                if (i == ctx.selectedMenuIndex) {
-                    canvas.setTextColor(GREEN, BLACK);
-                    canvas.print("> ");
-                } else {
-                    canvas.setTextColor(WHITE, BLACK);
-                    canvas.print("  ");
-                }
-                canvas.print(options[i]);
-            }
-            drawFooter("[UP/DOWN] Select  [ENTER] OK");
+            canvas.fillScreen(BLACK);
+            
+            // 绘制中央科技感六边形图案
+            RadarData homeData = { 75.0f, 90.0f, 60.0f, 85.0f, 40.0f, 70.0f };
+            drawRadarChart(canvas, 120, 52, 30, homeData, GREEN, DARKCYAN, false);
+
+            canvas.setTextColor(YELLOW, BLACK);
+            canvas.setTextSize(2);
+            canvas.setCursor(72, 92);
+            canvas.print("PARALLEL");
+
+            canvas.setTextColor(CYAN, BLACK);
+            canvas.setTextSize(1);
+            canvas.setCursor(62, 114);
+            canvas.print("PRESS ENTER TO START");
             break;
         }
 
@@ -71,9 +72,11 @@ void renderUI(const UIContext& ctx) {
 
             drawHeader(title);
 
-            // 显示 4~6 个选项列表
+            // 显示 4~6 个带几何图标符号的科技感选项列表
             int count = 0;
             const char* items[8];
+            const char* icons[] = { "◇", "○", "△", "□", "☆", "⬡" };
+
             if (ctx.state == AppState::BUILDER_TYPE) {
                 count = 6;
                 items[0]="GET"; items[1]="GO"; items[2]="DO"; items[3]="SAY"; items[4]="CHOOSE"; items[5]="CHANGE";
@@ -98,15 +101,14 @@ void renderUI(const UIContext& ctx) {
 
             for (int i = visibleStart; i < count && i < visibleStart + 3; ++i) {
                 canvas.setTextSize(2);
-                canvas.setCursor(10, 35 + (i - visibleStart) * 26);
+                canvas.setCursor(10, 32 + (i - visibleStart) * 28);
                 if (i == ctx.selectedMenuIndex) {
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.print("> ");
+                    canvas.printf("> %s %s", icons[i % 6], items[i]);
                 } else {
                     canvas.setTextColor(WHITE, BLACK);
-                    canvas.print("  ");
+                    canvas.printf("  %s %s", icons[i % 6], items[i]);
                 }
-                canvas.print(items[i]);
             }
             drawFooter("[UP/DN] Move [ENTER] Select [ESC] Back");
             break;
@@ -116,14 +118,25 @@ void renderUI(const UIContext& ctx) {
             drawHeader("SCENARIO PREVIEW");
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(10, 35);
+            canvas.setCursor(10, 32);
             canvas.printf("Type    : %s\n", getDecisionTypeName(ctx.currentSelection.decisionType));
-            canvas.setCursor(10, 50);
+            canvas.setCursor(10, 48);
             canvas.printf("Motiv   : %s\n", getMotivationName(ctx.currentSelection.motivation));
-            canvas.setCursor(10, 65);
+            canvas.setCursor(10, 64);
             canvas.printf("Concern : %s (%s)\n", getConcernName(ctx.currentSelection.concern), getIntensityName(ctx.currentSelection.intensity));
             canvas.setCursor(10, 80);
             canvas.printf("Priority: %s\n", getPriorityName(ctx.currentSelection.priority));
+
+            // 右边画一个预览抽象雷达轮廓
+            RadarData prevData = {
+                ctx.currentScenario.risk,
+                ctx.currentScenario.novelty,
+                ctx.currentScenario.practicalValue,
+                ctx.currentScenario.social,
+                100.0f - ctx.currentScenario.uncertainty,
+                ctx.currentScenario.practicalValue
+            };
+            drawRadarChart(canvas, 185, 65, 26, prevData, CYAN, DARKCYAN, false);
 
             drawFooter("[ENTER] SIMULATE  [ESC] BACK");
             break;
@@ -133,13 +146,18 @@ void renderUI(const UIContext& ctx) {
             drawHeader("SIMULATING...");
             canvas.setTextSize(2);
             canvas.setTextColor(GREEN, BLACK);
-            canvas.setCursor(20, 45);
+            canvas.setCursor(20, 36);
             canvas.print("16 BRANCHES");
 
-            // 绘制进度条
-            int barWidth = (int)(ctx.animProgress * 2.0f);
-            canvas.drawRect(20, 80, 200, 16, GREEN);
-            canvas.fillRect(22, 82, barWidth > 196 ? 196 : barWidth, 12, CYAN);
+            // 绘制辐射线框与进度点阵动画
+            int barWidth = (int)(ctx.animProgress * 1.9f);
+            canvas.drawRect(20, 72, 200, 16, GREEN);
+            canvas.fillRect(22, 74, barWidth > 196 ? 196 : barWidth, 12, CYAN);
+
+            canvas.setTextSize(1);
+            canvas.setTextColor(YELLOW, BLACK);
+            canvas.setCursor(65, 96);
+            canvas.printf("ANALYZING %d%%...", ctx.animProgress);
             break;
         }
 
@@ -159,28 +177,41 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(10, 85);
             canvas.printf("MAYBE : %2d", ctx.summary.maybeCount);
 
+            // 右侧示意柱状占比图
+            canvas.fillRect(150, 38, ctx.summary.yesCount * 6, 12, GREEN);
+            canvas.fillRect(150, 63, ctx.summary.noCount * 6, 12, RED);
+            canvas.fillRect(150, 88, ctx.summary.maybeCount * 6, 12, YELLOW);
+
             drawFooter("[ENTER] BIGGEST SPLIT >");
             break;
         }
 
         case AppState::BIGGEST_SPLIT: {
             drawHeader("BIGGEST SPLIT");
-            canvas.setTextSize(2);
             
-            // YES Side
-            canvas.setTextColor(GREEN, BLACK);
-            canvas.setCursor(15, 38);
-            canvas.printf("%s (YES)", getMBTIName(ctx.splitYesType));
+            // 左边：YES 侧 MBTI 雷达图
+            const PersonalityProfile& yesProf = getMBTIProfile(ctx.splitYesType);
+            RadarData yesData = { yesProf.risk, yesProf.novelty, yesProf.logic, yesProf.social, yesProf.planning, yesProf.practicality };
+            drawRadarChart(canvas, 55, 66, 25, yesData, GREEN, DARKCYAN, false);
 
-            // VS
+            canvas.setTextSize(2);
+            canvas.setTextColor(GREEN, BLACK);
+            canvas.setCursor(15, 102);
+            canvas.printf("%s YES", getMBTIName(ctx.splitYesType));
+
+            // 中间 VS
             canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(105, 65);
+            canvas.setCursor(110, 60);
             canvas.print("VS");
 
-            // NO Side
+            // 右边：NO 侧 MBTI 雷达图
+            const PersonalityProfile& noProf = getMBTIProfile(ctx.splitNoType);
+            RadarData noData = { noProf.risk, noProf.novelty, noProf.logic, noProf.social, noProf.planning, noProf.practicality };
+            drawRadarChart(canvas, 185, 66, 25, noData, RED, DARKCYAN, false);
+
             canvas.setTextColor(RED, BLACK);
-            canvas.setCursor(15, 92);
-            canvas.printf("%s (NO)", getMBTIName(ctx.splitNoType));
+            canvas.setCursor(150, 102);
+            canvas.printf("%s NO", getMBTIName(ctx.splitNoType));
 
             drawFooter("[ENTER] EXPLORE DETAILS >");
             break;
@@ -192,6 +223,12 @@ void renderUI(const UIContext& ctx) {
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle);
 
+            // 右侧(x=175, y=65): 实时画出该 MBTI 专属的六维极坐标雷达图形状！
+            const PersonalityProfile& pProf = getMBTIProfile(res.personality);
+            RadarData mbtiData = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
+            drawRadarChart(canvas, 175, 66, 28, mbtiData, CYAN, DARKCYAN, true);
+
+            // 左侧信息
             canvas.setTextSize(2);
             if (res.decision == Decision::YES) {
                 canvas.setTextColor(GREEN, BLACK);
@@ -200,18 +237,18 @@ void renderUI(const UIContext& ctx) {
             } else {
                 canvas.setTextColor(YELLOW, BLACK);
             }
-            canvas.setCursor(10, 35);
+            canvas.setCursor(10, 32);
             canvas.printf("Choice: %s", getDecisionName(res.decision));
 
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(10, 60);
+            canvas.setCursor(10, 56);
             canvas.printf("Score: %.1f", res.score);
 
-            canvas.setCursor(10, 78);
+            canvas.setCursor(10, 72);
             canvas.setTextColor(CYAN, BLACK);
             canvas.print("Reason:");
-            canvas.setCursor(10, 92);
+            canvas.setCursor(10, 86);
             canvas.setTextColor(LIGHTGREY, BLACK);
             canvas.print(res.reason);
 
@@ -239,37 +276,45 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::YOUR_MATCH: {
-            drawHeader("YOUR MATCH RESULT");
+            drawHeader("YOUR DECISION PROFILE");
+            
+            // 左边(x=60, y=66): 绘制用户在此次选择下的决策轮廓雷达图！
+            RadarData uData = {
+                ctx.userProfile.risk,
+                ctx.userProfile.novelty,
+                ctx.userProfile.logic,
+                ctx.userProfile.social,
+                ctx.userProfile.planning,
+                ctx.userProfile.practicality
+            };
+            drawRadarChart(canvas, 60, 66, 28, uData, GREEN, DARKGREEN, true);
+
+            // 右边(x=125): 显示最具相近度的 MBTI 结果！
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(10, 35);
-            canvas.print("YOU MATCHED WITH:");
+            canvas.setCursor(125, 36);
+            canvas.print("CLOSEST MATCH:");
 
             canvas.setTextSize(2);
-            canvas.setTextColor(GREEN, BLACK);
-            canvas.setCursor(10, 58);
+            canvas.setTextColor(YELLOW, BLACK);
+            canvas.setCursor(125, 52);
+            canvas.printf("%s", getMBTIName(ctx.closestMBTI));
 
-            int matchCount = 0;
-            for (int i = 0; i < MBTI_COUNT; ++i) {
-                if (ctx.results[i].decision == ctx.userChoice) {
-                    canvas.printf("%s ", getMBTIName(ctx.results[i].personality));
-                    matchCount++;
-                    if (matchCount % 4 == 0) {
-                        canvas.setCursor(10, 58 + (matchCount / 4) * 22);
-                    }
-                }
-            }
-            if (matchCount == 0) {
-                canvas.setTextColor(YELLOW, BLACK);
-                canvas.print("YOU ARE THE OUTLIER!");
-            }
+            canvas.setTextSize(1);
+            canvas.setTextColor(CYAN, BLACK);
+            canvas.setCursor(125, 75);
+            canvas.printf("Similarity: %.1f%%", ctx.matchSimilarity);
+
+            canvas.setTextColor(LIGHTGREY, BLACK);
+            canvas.setCursor(125, 92);
+            canvas.printf("Choice: %s", getDecisionName(ctx.userChoice));
 
             drawFooter("[ENTER] BACK TO HOME");
             break;
         }
     }
 
-    // 离屏画布单次传输推送，彻底消除屏幕刷新闪烁
+    // 离屏画布单次推送，彻底消除闪烁
     canvas.pushSprite(0, 0);
 #else
     // 降级控制台调试打印

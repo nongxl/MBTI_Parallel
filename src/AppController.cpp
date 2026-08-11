@@ -1,6 +1,7 @@
 #include "AppController.h"
 #include "ScenarioMapper.h"
 #include "DisplayRenderer.h"
+#include "DecisionProfile.h"
 
 void initApp(UIContext& ctx) {
     ctx.state = AppState::HOME;
@@ -18,6 +19,8 @@ void initApp(UIContext& ctx) {
     ctx.currentSelection.priority = Priority::EXPERIENCE;
 
     ctx.currentScenario = buildScenario(ctx.currentSelection);
+    ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
+    ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
 }
 
 void updateApp(UIContext& ctx, uint32_t currentMillis) {
@@ -48,18 +51,9 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
     switch (ctx.state) {
         case AppState::HOME:
-            if (key == KeyInput::UP || key == KeyInput::DOWN) {
-                ctx.selectedMenuIndex = 1 - ctx.selectedMenuIndex;
-            } else if (key == KeyInput::ENTER) {
-                if (ctx.selectedMenuIndex == 0) {
-                    ctx.state = AppState::BUILDER_TYPE;
-                    ctx.selectedMenuIndex = 0;
-                } else {
-                    // RANDOM 模式
-                    const RandomPreset& preset = getRandomPreset(0); // 抽取预置场景
-                    ctx.currentScenario = preset.scenario;
-                    ctx.state = AppState::BUILDER_PREVIEW;
-                }
+            if (key == KeyInput::ENTER) {
+                ctx.state = AppState::BUILDER_TYPE;
+                ctx.selectedMenuIndex = 0;
             }
             break;
 
@@ -192,6 +186,11 @@ void handleInput(UIContext& ctx, KeyInput key) {
             } else if (key == KeyInput::ENTER) {
                 Decision choices[] = { Decision::YES, Decision::NO, Decision::MAYBE };
                 ctx.userChoice = choices[ctx.selectedMenuIndex];
+
+                // 计算用户的决策轮廓并匹配相近度最高的人格
+                ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
+                ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
+
                 ctx.state = AppState::YOUR_MATCH;
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::EXPLORE;

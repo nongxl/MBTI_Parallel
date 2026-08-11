@@ -6,6 +6,7 @@
 #include "Scenario.h"
 #include "DecisionEngine.h"
 #include "ScenarioBuilder.h"
+#include "DecisionProfile.h"
 
 enum class AppState {
     HOME,
@@ -46,6 +47,10 @@ struct UIContext {
     int selectedMenuIndex;
     int exploreIndex;
     Decision userChoice;
+
+    DecisionProfile userProfile;
+    MBTIType closestMBTI;
+    float matchSimilarity;
 
     uint32_t animStartTime;
     uint32_t animProgress; // 0 ~ 100
