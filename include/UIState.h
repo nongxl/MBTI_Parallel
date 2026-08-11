@@ -8,6 +8,7 @@
 #include "ScenarioBuilder.h"
 #include "DecisionProfile.h"
 #include "RadarChart.h"
+#include "ScenarioGenerator.h"
 
 enum class AppState {
     HOME,
@@ -46,8 +47,8 @@ struct UIContext {
     AppState state;
     UserSelection currentSelection;
     Scenario currentScenario;
-    const char* currentScenarioTitle;
-    const char* currentScenarioDesc;
+    char currentScenarioTitle[32];
+    char currentScenarioDesc[80];
 
     DecisionResult results[MBTI_COUNT];
     DecisionSummary summary;
@@ -63,8 +64,11 @@ struct UIContext {
     float matchSimilarity;
     MatchType matchType;
 
-    // 畅玩闭环与防重复
-    int recentScenarioIds[3];
+    // 程序化场景生成 DNA 10 次防重复历史
+    ScenarioDNA recentDNAs[RECENT_DNA_HISTORY_SIZE];
+    int dnaHistoryCount;
+
+    // 畅玩闭环与把玩统计
     int totalPlays;
 
     uint32_t animStartTime;

@@ -2,7 +2,9 @@
 #include "ScenarioMapper.h"
 #include "DisplayRenderer.h"
 #include "DecisionProfile.h"
-#include "ScenarioPool.h"
+#include "ScenarioGenerator.h"
+#include <cstdio>
+#include <cstring>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -45,15 +47,20 @@ static MatchType determineMatchType(const UIContext& ctx) {
 }
 
 static void triggerRandomScenario(UIContext& ctx) {
-    const ScenarioTemplate& tmpl = getRandomScenario(ctx.recentScenarioIds);
-    ctx.currentScenario = tmpl.scenario;
-    ctx.currentScenarioTitle = tmpl.title;
-    ctx.currentScenarioDesc = tmpl.description;
+    // 离线程序化场景生成管线：生成 5 Candidate 选优输出
+    GeneratedScenario gen = generateProceduralScenario(ctx.recentDNAs, ctx.dnaHistoryCount);
+    ctx.currentScenario = gen.scenario;
+    snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", gen.title);
+    snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "%s", gen.description);
 
-    // 压入最近 3 次防重复队列
-    ctx.recentScenarioIds[2] = ctx.recentScenarioIds[1];
-    ctx.recentScenarioIds[1] = ctx.recentScenarioIds[0];
-    ctx.recentScenarioIds[0] = tmpl.id;
+    // 将选出的 DNA 压入 10 次历史记录
+    for (int i = RECENT_DNA_HISTORY_SIZE - 1; i > 0; --i) {
+        ctx.recentDNAs[i] = ctx.recentDNAs[i - 1];
+    }
+    ctx.recentDNAs[0] = gen.dna;
+    if (ctx.dnaHistoryCount < RECENT_DNA_HISTORY_SIZE) {
+        ctx.dnaHistoryCount++;
+    }
 }
 
 void initApp(UIContext& ctx) {
@@ -64,10 +71,7 @@ void initApp(UIContext& ctx) {
     ctx.animStartTime = 0;
     ctx.animProgress = 0;
     ctx.totalPlays = 0;
-
-    ctx.recentScenarioIds[0] = -1;
-    ctx.recentScenarioIds[1] = -1;
-    ctx.recentScenarioIds[2] = -1;
+    ctx.dnaHistoryCount = 0;
 
     // 雷达插值变量初始化
     ctx.isRadarAnimActive = false;
@@ -83,8 +87,8 @@ void initApp(UIContext& ctx) {
     ctx.currentSelection.intensity = Intensity::MEDIUM;
     ctx.currentSelection.priority = Priority::EXPERIENCE;
 
-    ctx.currentScenarioTitle = "CUSTOM SCENARIO";
-    ctx.currentScenarioDesc = "User-constructed decision scenario.";
+    snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "CUSTOM SCENARIO");
+    snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "User-constructed decision scenario.");
     ctx.currentScenario = buildScenario(ctx.currentSelection);
 
     ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
@@ -140,7 +144,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
     switch (ctx.state) {
         case AppState::HOME:
             if (key == KeyInput::ENTER) {
-                // 默认从 20 个防重复场景库中随机抽取一个开局！
+                // 程序化场景生成开局
                 triggerRandomScenario(ctx);
                 ctx.state = AppState::BUILDER_PREVIEW;
             }
@@ -255,8 +259,8 @@ void handleInput(UIContext& ctx, KeyInput key) {
             } else if (key == KeyInput::ENTER) {
                 Priority p[] = { Priority::EXPERIENCE, Priority::PRACTICAL, Priority::PEOPLE, Priority::SAFETY };
                 ctx.currentSelection.priority = p[idx];
-                ctx.currentScenarioTitle = "CUSTOM SCENARIO";
-                ctx.currentScenarioDesc = "User-constructed decision scenario.";
+                snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "CUSTOM SCENARIO");
+                snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "User-constructed decision scenario.");
                 ctx.currentScenario = buildScenario(ctx.currentSelection);
                 ctx.state = AppState::BUILDER_PREVIEW;
                 return;
@@ -357,7 +361,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
         case AppState::YOUR_MATCH:
             if (key == KeyInput::ENTER) {
-                // 【Quick Play 畅玩无限闭环】递增总次数，自动防重复抽取下一个新场景！
+                // 【Quick Play 畅玩无限闭环】递增总次数，程序化生成下一个全新的独一无二场景！
                 ctx.totalPlays++;
                 triggerRandomScenario(ctx);
                 ctx.state = AppState::BUILDER_PREVIEW;

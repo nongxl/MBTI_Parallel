@@ -2,6 +2,7 @@
 #include "UIState.h"
 #include "DisplayRenderer.h"
 #include "AppController.h"
+#include "ScenarioGenerator.h"
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -76,6 +77,21 @@ void loop() {
 int main() {
     initApp(g_uiContext);
     printf("MBTI Parallel Cardputer Engine Initialized.\n");
+
+    // 运行 100 次程序化场景生成基准测试
+    printf("\n=== RUNNING 100 PROCEDURAL SCENARIO GENERATION BENCHMARK ===\n");
+    ScenarioDNA recentHistory[10];
+    int count = 0;
+    for (int i = 0; i < 100; ++i) {
+        GeneratedScenario gen = generateProceduralScenario(recentHistory, count);
+        printf("[%03d] Quality: %5.1f | Title: %-20s | Desc: %s\n", i + 1, gen.qualityScore, gen.title, gen.description);
+        
+        for (int k = 9; k > 0; --k) recentHistory[k] = recentHistory[k - 1];
+        recentHistory[0] = gen.dna;
+        if (count < 10) count++;
+    }
+    printf("=== BENCHMARK COMPLETED SUCCESSFULLY (100 SCENARIOS GENERATED) ===\n");
+
     return 0;
 }
 #endif
