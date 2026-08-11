@@ -10,6 +10,8 @@
 
 #ifdef ARDUINO
 #include <Arduino.h>
+#include <Preferences.h>
+static Preferences prefs;
 #else
 static uint32_t millis() { return 0; }
 #endif
@@ -61,7 +63,6 @@ static void findBiggestDifferenceMBTI(const UIContext& ctx, MBTIType& outDiffMBT
     for (int i = 0; i < MBTI_COUNT; ++i) {
         const PersonalityProfile& prof = getMBTIProfile(static_cast<MBTIType>(i));
         
-        // 计算 6 维归一化欧氏距离
         float dRisk = (ctx.userProfile.risk - prof.risk);
         float dNov  = (ctx.userProfile.novelty - prof.novelty);
         float dLog  = (ctx.userProfile.logic - prof.logic);
@@ -84,7 +85,6 @@ static void findBiggestDifferenceMBTI(const UIContext& ctx, MBTIType& outDiffMBT
 }
 
 static void triggerRandomScenario(UIContext& ctx) {
-    // 离线程序化场景生成管线：生成 5 Candidate 选优输出
     GeneratedScenario gen = generateProceduralScenario(ctx.recentDNAs, ctx.dnaHistoryCount);
     ctx.currentScenario = gen.scenario;
     snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", gen.title);
@@ -111,9 +111,7 @@ static void applyCustomScenario(UIContext& ctx) {
 }
 
 void initApp(UIContext& ctx) {
-    ctx.state = AppState::HOME;
-    ctx.lang = Language::CHINESE; // 默认语言设为中文
-    ctx.bootMenuMode = 0;         // 默认选中 0: 随机场景模式
+    ctx.bootMenuMode = 0;
     ctx.selectedMenuIndex = 0;
     ctx.exploreIndex = 0;
     ctx.userChoice = Decision::YES;
@@ -121,6 +119,23 @@ void initApp(UIContext& ctx) {
     ctx.animProgress = 0;
     ctx.totalPlays = 0;
     ctx.dnaHistoryCount = 0;
+
+#ifdef ARDUINO
+    // 读取 ESP32 NVS Flash 语言持久化偏好
+    prefs.begin("mbti_config", false);
+    bool hasConfig = prefs.getBool("configured", false);
+    if (hasConfig) {
+        int savedLang = prefs.getInt("lang", 1);
+        ctx.lang = static_cast<Language>(savedLang);
+        ctx.state = AppState::HOME;
+    } else {
+        ctx.lang = Language::CHINESE;
+        ctx.state = AppState::LANGUAGE_SELECT; // 首次开机进入独立语言选择弹窗屏
+    }
+#else
+    ctx.lang = Language::CHINESE;
+    ctx.state = AppState::HOME;
+#endif
 
     // 默认自定义 4 步 DNA
     ctx.customDNA.who = WhoType::FRIEND;
@@ -189,21 +204,33 @@ void handleInput(UIContext& ctx, KeyInput key) {
     uint32_t now = millis();
 
     switch (ctx.state) {
+        case AppState::LANGUAGE_SELECT: {
+            // 首次开机语言选择屏幕
+            if (key == KeyInput::LEFT || key == KeyInput::UP) {
+                ctx.selectedMenuIndex = 0; // 中文
+            } else if (key == KeyInput::RIGHT || key == KeyInput::DOWN) {
+                ctx.selectedMenuIndex = 1; // English
+            } else if (key == KeyInput::ENTER) {
+                ctx.lang = (ctx.selectedMenuIndex == 0) ? Language::CHINESE : Language::ENGLISH;
+#ifdef ARDUINO
+                // 锁存选中的语言持久化存入 ESP32 NVS Flash
+                prefs.putBool("configured", true);
+                prefs.putInt("lang", static_cast<int>(ctx.lang));
+#endif
+                ctx.state = AppState::HOME;
+                ctx.selectedMenuIndex = 0;
+            }
+            break;
+        }
+
         case AppState::HOME:
-            if (key == KeyInput::LEFT) {
-                ctx.lang = Language::CHINESE;
-            } else if (key == KeyInput::RIGHT) {
-                ctx.lang = Language::ENGLISH;
-            } else if (key == KeyInput::UP || key == KeyInput::DOWN) {
-                // 上下键在【1. 随机场景模式】与【2. 自定义构造模式】之间切换
+            if (key == KeyInput::UP || key == KeyInput::DOWN) {
                 ctx.bootMenuMode = 1 - ctx.bootMenuMode;
             } else if (key == KeyInput::ENTER) {
                 if (ctx.bootMenuMode == 0) {
-                    // 1. 随机模式 -> 触发程序化随机生成
                     triggerRandomScenario(ctx);
                     ctx.state = AppState::BUILDER_PREVIEW;
                 } else {
-                    // 2. 自定义模式 -> 进入 WHO (Step 1) 构造流
                     ctx.state = AppState::BUILDER_WHO;
                     ctx.selectedMenuIndex = 0;
                 }

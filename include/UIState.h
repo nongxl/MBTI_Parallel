@@ -11,6 +11,7 @@
 #include "ScenarioGenerator.h"
 
 enum class AppState {
+    LANGUAGE_SELECT,    // 首次开机语言选择屏
     HOME,
     BUILDER_WHO,        // Step 1: WHO
     BUILDER_SITUATION,  // Step 2: SITUATION
@@ -51,6 +52,7 @@ struct UIContext {
     AppState state;
     Language lang;      // 当前语言设置 (ENGLISH / CHINESE)
     int bootMenuMode;   // 开机选框模式: 0 (随机模式 RANDOM), 1 (自定义模式 CREATE)
+    bool isFirstLaunch; // 标记是否为首次烧录/未配置语言
 
     // 自定义决策场景 4 步 DNA
     CustomScenarioDNA customDNA;

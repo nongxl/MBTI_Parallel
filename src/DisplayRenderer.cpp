@@ -68,6 +68,36 @@ void renderUI(const UIContext& ctx) {
     }
 
     switch (ctx.state) {
+        case AppState::LANGUAGE_SELECT: {
+            // 首次开机语言选择屏幕 (只在初次烧录或未配置时弹出)
+            canvas.fillScreen(BLACK);
+            
+            drawHeader("SELECT LANGUAGE / 选择语言", true);
+
+            canvas.setFont(&fonts::efontCN_12);
+            canvas.setTextSize(1);
+
+            // 中文选项选框
+            if (ctx.selectedMenuIndex == 0) {
+                canvas.setTextColor(CYAN, BLACK);
+                canvas.setCursor(30, 48);
+                canvas.print("> 1. 中文 (Simplified Chinese)");
+                canvas.setTextColor(WHITE, BLACK);
+                canvas.setCursor(30, 78);
+                canvas.print("  2. English (US)");
+            } else {
+                canvas.setTextColor(WHITE, BLACK);
+                canvas.setCursor(30, 48);
+                canvas.print("  1. 中文 (Simplified Chinese)");
+                canvas.setTextColor(CYAN, BLACK);
+                canvas.setCursor(30, 78);
+                canvas.print("> 2. English (US)");
+            }
+
+            drawFooter("[左右/上下] 移动  [ENTER] 确认并保存", true);
+            break;
+        }
+
         case AppState::HOME: {
             canvas.fillScreen(BLACK);
             
@@ -83,34 +113,34 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 绘制背景科技感主六边形图 (centerX = 120, centerY = 40, radius = 38)
-            drawRadarChart(canvas, 120, 40, 38, homeData, GREEN, DARKCYAN, false, isCN);
-
-            // 标题文字 PARALLEL
+            // 图层 1: 【背景大标题 PARALLEL】(先在背景层打印暗浅文本，形成穿透透视)
             canvas.setFont(&fonts::Font0);
-            canvas.setTextColor(YELLOW, BLACK);
-            canvas.setTextSize(2);
-            canvas.setCursor(72, 5);
+            canvas.setTextColor(DARKGREY, BLACK);
+            canvas.setTextSize(3);
+            canvas.setCursor(48, 30);
             canvas.print("PARALLEL");
 
-            // 开机双模式切选菜单 (1. 🎲 随机模式 / 2. 🛠️ 自定义模式)
+            // 图层 2: 【前景六边形发光雷达图】(直接叠加在 PARALLEL 大标题上，穿透立体感极强)
+            drawRadarChart(canvas, 120, 44, 46, homeData, GREEN, DARKCYAN, false, isCN);
+
+            // 图层 3: 开机双模式切选菜单 (1. 🎲 随机模式 / 2. 🛠️ 自定义模式)
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
 
                 if (ctx.bootMenuMode == 0) {
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(32, 83);
+                    canvas.setCursor(32, 85);
                     canvas.print("> 1. 🎲 随机场景模式");
                     canvas.setTextColor(LIGHTGREY, BLACK);
-                    canvas.setCursor(32, 99);
+                    canvas.setCursor(32, 101);
                     canvas.print("  2. 🛠️ 自定义场景构造");
                 } else {
                     canvas.setTextColor(LIGHTGREY, BLACK);
-                    canvas.setCursor(32, 83);
+                    canvas.setCursor(32, 85);
                     canvas.print("  1. 🎲 随机场景模式");
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(32, 99);
+                    canvas.setCursor(32, 101);
                     canvas.print("> 2. 🛠️ 自定义场景构造");
                 }
             } else {
@@ -119,23 +149,23 @@ void renderUI(const UIContext& ctx) {
 
                 if (ctx.bootMenuMode == 0) {
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(32, 83);
+                    canvas.setCursor(32, 85);
                     canvas.print("> 1. RANDOM SCENARIO");
                     canvas.setTextColor(LIGHTGREY, BLACK);
-                    canvas.setCursor(32, 99);
+                    canvas.setCursor(32, 101);
                     canvas.print("  2. CREATE SCENARIO");
                 } else {
                     canvas.setTextColor(LIGHTGREY, BLACK);
-                    canvas.setCursor(32, 83);
+                    canvas.setCursor(32, 85);
                     canvas.print("  1. RANDOM SCENARIO");
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(32, 99);
+                    canvas.setCursor(32, 101);
                     canvas.print("> 2. CREATE SCENARIO");
                 }
             }
 
-            // 底栏绘制语言与操作引导提示
-            const char* homeFooter = isCN ? "[左右] 语言  [上下] 模式  [ENTER] 开始" : "[L/R] Lang  [UP/DN] Mode  [ENTER] Start";
+            // 图层 4: 底栏 Footer 引导
+            const char* homeFooter = isCN ? "[上下] 切换模式  [ENTER] 开始测试" : "[UP/DN] Select Mode  [ENTER] Start";
             drawFooter(homeFooter, isCN);
 
             if (ctx.totalPlays > 0) {
