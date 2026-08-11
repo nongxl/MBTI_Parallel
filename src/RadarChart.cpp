@@ -32,7 +32,7 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
         canvas.drawLine(lastX, lastY, firstX, firstY, gridColor);
     }
 
-    // 2. 绘制 6 条轴线与轴标签 (N, R, PL, PR, L, S)
+    // 2. 绘制 6 条轴线与清晰全称轴标签 (NOVELTY, RISK, PLANNING, PRACTICAL, LOGIC, SOCIAL)
     const float values[RADAR_AXIS_COUNT] = {
         data.novelty,
         data.risk,
@@ -42,7 +42,7 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
         data.social
     };
 
-    const char* axisLabels[RADAR_AXIS_COUNT] = { "N", "R", "PL", "PR", "L", "S" };
+    const char* axisLabels[RADAR_AXIS_COUNT] = { "NOVELTY", "RISK", "PLANNING", "PRACTICAL", "LOGIC", "SOCIAL" };
 
     int dataX[RADAR_AXIS_COUNT];
     int dataY[RADAR_AXIS_COUNT];
@@ -68,11 +68,39 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
         glowY[i] = centerY - static_cast<int>(radius * (normVal * 0.90f) * sinf(angle));
 
         if (showAxisLabels) {
-            int labelX = centerX + static_cast<int>((radius + 9) * cosf(angle));
-            int labelY = centerY - static_cast<int>((radius + 9) * sinf(angle));
             canvas.setTextSize(1);
             canvas.setTextColor(LIGHTGREY, BLACK);
-            canvas.setCursor(labelX - 3, labelY - 4);
+
+            // 针对 6 个极坐标角度进行全称精细居中对齐 offset
+            int labelX = centerX;
+            int labelY = centerY;
+            switch (i) {
+                case 0: // 90° Top (NOVELTY)
+                    labelX = centerX - 21;
+                    labelY = centerY - radius - 11;
+                    break;
+                case 1: // 30° Top-Right (RISK)
+                    labelX = centerX + radius + 3;
+                    labelY = centerY - 14;
+                    break;
+                case 2: // 330° Bottom-Right (PLANNING)
+                    labelX = centerX + radius + 3;
+                    labelY = centerY + 3;
+                    break;
+                case 3: // 270° Bottom (PRACTICAL)
+                    labelX = centerX - 24;
+                    labelY = centerY + radius + 3;
+                    break;
+                case 4: // 210° Bottom-Left (LOGIC)
+                    labelX = centerX - radius - 33;
+                    labelY = centerY + 3;
+                    break;
+                case 5: // 150° Top-Left (SOCIAL)
+                    labelX = centerX - radius - 38;
+                    labelY = centerY - 14;
+                    break;
+            }
+            canvas.setCursor(labelX, labelY);
             canvas.print(axisLabels[i]);
         }
     }
