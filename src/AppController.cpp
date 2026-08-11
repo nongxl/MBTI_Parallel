@@ -120,7 +120,6 @@ void initApp(UIContext& ctx) {
     ctx.dnaHistoryCount = 0;
 
 #ifdef ARDUINO
-    // 读取 ESP32 NVS Flash 语言持久化偏好
     prefs.begin("mbti_config", false);
     bool hasConfig = prefs.getBool("configured", false);
     if (hasConfig) {
@@ -136,17 +135,14 @@ void initApp(UIContext& ctx) {
     ctx.state = AppState::HOME;
 #endif
 
-    // 从 NVS 加载用户累积决策历史
     loadUserHistoryFromNVS(ctx.userHistory);
     ctx.totalPlays = ctx.userHistory.totalPlays;
 
-    // 默认自定义 4 步 DNA
     ctx.customDNA.who = WhoType::FRIEND;
     ctx.customDNA.situation = SituationType::TRAVEL;
     ctx.customDNA.condition = ConditionType::LAST_MINUTE;
     ctx.customDNA.tension = TensionType::SAFETY_VS_NOVELTY;
 
-    // 雷达插值变量初始化
     ctx.isRadarAnimActive = false;
     ctx.radarAnimStartTime = 0;
     ctx.currentRadar = { 75.0f, 90.0f, 60.0f, 85.0f, 40.0f, 70.0f };
@@ -225,16 +221,36 @@ void handleInput(UIContext& ctx, KeyInput key) {
         }
 
         case AppState::HOME:
-            if (key == KeyInput::UP || key == KeyInput::DOWN) {
-                ctx.bootMenuMode = 1 - ctx.bootMenuMode;
+            if (key == KeyInput::UP) {
+                ctx.bootMenuMode = (ctx.bootMenuMode + 2) % 3;
+            } else if (key == KeyInput::DOWN) {
+                ctx.bootMenuMode = (ctx.bootMenuMode + 1) % 3;
             } else if (key == KeyInput::ENTER) {
                 if (ctx.bootMenuMode == 0) {
                     triggerRandomScenario(ctx);
                     ctx.state = AppState::BUILDER_PREVIEW;
-                } else {
+                } else if (ctx.bootMenuMode == 1) {
                     ctx.state = AppState::BUILDER_WHO;
                     ctx.selectedMenuIndex = 0;
+                } else { // 2: MY_PROFILE 真实人格画像
+                    RadarData target = {
+                        ctx.userHistory.cumulativeRisk,
+                        ctx.userHistory.cumulativeNovelty,
+                        ctx.userHistory.cumulativeLogic,
+                        ctx.userHistory.cumulativeSocial,
+                        ctx.userHistory.cumulativePlanning,
+                        ctx.userHistory.cumulativePracticality
+                    };
+                    startRadarAnimation(ctx, target, now);
+                    ctx.state = AppState::MY_PROFILE;
                 }
+            }
+            break;
+
+        case AppState::MY_PROFILE:
+            if (key == KeyInput::ENTER || key == KeyInput::BACK) {
+                ctx.state = AppState::HOME;
+                ctx.selectedMenuIndex = 0;
             }
             break;
 
@@ -365,7 +381,6 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 findBiggestDifferenceMBTI(ctx, ctx.biggestDiffMBTI, ctx.biggestDiffDecision);
                 ctx.matchType = determineMatchType(ctx);
 
-                // 【记录并 0ms 持久化存入 ESP32 NVS Flash】
                 recordUserDecisionToHistory(ctx.userHistory, ctx.userProfile, ctx.userChoice);
                 ctx.totalPlays = ctx.userHistory.totalPlays;
 

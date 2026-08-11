@@ -69,15 +69,12 @@ void renderUI(const UIContext& ctx) {
 
     switch (ctx.state) {
         case AppState::LANGUAGE_SELECT: {
-            // 首次开机语言选择屏幕 (只在初次烧录或未配置时弹出)
             canvas.fillScreen(BLACK);
-            
             drawHeader("SELECT LANGUAGE / 选择语言", true);
 
             canvas.setFont(&fonts::efontCN_12);
             canvas.setTextSize(1);
 
-            // 中文选项选框
             if (ctx.selectedMenuIndex == 0) {
                 canvas.setTextColor(CYAN, BLACK);
                 canvas.setCursor(30, 48);
@@ -101,7 +98,6 @@ void renderUI(const UIContext& ctx) {
         case AppState::HOME: {
             canvas.fillScreen(BLACK);
             
-            // 基于运行时间计算 6 维正弦波律动波形 (Sinusoidal Morphing Wave)
             uint32_t now = millis();
             float t = now / 1000.0f;
             RadarData homeData = {
@@ -113,59 +109,67 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 图层 1: 【背景大标题 PARALLEL】(先在背景层打印暗浅文本，形成穿透透视)
+            // 图层 1: 【背景大标题 PARALLEL】
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(DARKGREY, BLACK);
             canvas.setTextSize(3);
-            canvas.setCursor(48, 30);
+            canvas.setCursor(48, 25);
             canvas.print("PARALLEL");
 
-            // 图层 2: 【前景六边形发光雷达图】(直接叠加在 PARALLEL 大标题上，穿透立体感极强)
-            drawRadarChart(canvas, 120, 44, 46, homeData, GREEN, DARKCYAN, false, isCN);
+            // 图层 2: 【前景六边形发光雷达图】
+            drawRadarChart(canvas, 120, 38, 42, homeData, GREEN, DARKCYAN, false, isCN);
 
-            // 图层 3: 开机双模式切选菜单 (1. 🎲 随机模式 / 2. 🛠️ 自定义模式)
+            // 图层 3: 开机三大模式切选菜单 (1. 🎲 随机模式 / 2. 🛠️ 自定义模式 / 3. 👤 真实人格画像)
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
 
-                if (ctx.bootMenuMode == 0) {
-                    canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(32, 85);
-                    canvas.print("> 1. 🎲 随机场景模式");
-                    canvas.setTextColor(LIGHTGREY, BLACK);
-                    canvas.setCursor(32, 101);
-                    canvas.print("  2. 🛠️ 自定义场景构造");
-                } else {
-                    canvas.setTextColor(LIGHTGREY, BLACK);
-                    canvas.setCursor(32, 85);
-                    canvas.print("  1. 🎲 随机场景模式");
-                    canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(32, 101);
-                    canvas.print("> 2. 🛠️ 自定义场景构造");
-                }
+                const char* m0 = "  1. 🎲 随机场景模式";
+                const char* m1 = "  2. 🛠️ 自定义场景构造";
+                const char* m2 = "  3. 👤 真实人格画像";
+
+                if (ctx.bootMenuMode == 0) m0 = "> 1. 🎲 随机场景模式";
+                else if (ctx.bootMenuMode == 1) m1 = "> 2. 🛠️ 自定义场景构造";
+                else m2 = "> 3. 👤 真实人格画像";
+
+                canvas.setTextColor((ctx.bootMenuMode == 0) ? CYAN : LIGHTGREY, BLACK);
+                canvas.setCursor(32, 75);
+                canvas.print(m0);
+
+                canvas.setTextColor((ctx.bootMenuMode == 1) ? CYAN : LIGHTGREY, BLACK);
+                canvas.setCursor(32, 90);
+                canvas.print(m1);
+
+                canvas.setTextColor((ctx.bootMenuMode == 2) ? CYAN : LIGHTGREY, BLACK);
+                canvas.setCursor(32, 105);
+                canvas.print(m2);
             } else {
                 canvas.setFont(&fonts::Font0);
                 canvas.setTextSize(1);
 
-                if (ctx.bootMenuMode == 0) {
-                    canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(32, 85);
-                    canvas.print("> 1. RANDOM SCENARIO");
-                    canvas.setTextColor(LIGHTGREY, BLACK);
-                    canvas.setCursor(32, 101);
-                    canvas.print("  2. CREATE SCENARIO");
-                } else {
-                    canvas.setTextColor(LIGHTGREY, BLACK);
-                    canvas.setCursor(32, 85);
-                    canvas.print("  1. RANDOM SCENARIO");
-                    canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(32, 101);
-                    canvas.print("> 2. CREATE SCENARIO");
-                }
+                const char* m0 = "  1. RANDOM SCENARIO";
+                const char* m1 = "  2. CREATE SCENARIO";
+                const char* m2 = "  3. MY MBTI PROFILE";
+
+                if (ctx.bootMenuMode == 0) m0 = "> 1. RANDOM SCENARIO";
+                else if (ctx.bootMenuMode == 1) m1 = "> 2. CREATE SCENARIO";
+                else m2 = "> 3. MY MBTI PROFILE";
+
+                canvas.setTextColor((ctx.bootMenuMode == 0) ? CYAN : LIGHTGREY, BLACK);
+                canvas.setCursor(32, 75);
+                canvas.print(m0);
+
+                canvas.setTextColor((ctx.bootMenuMode == 1) ? CYAN : LIGHTGREY, BLACK);
+                canvas.setCursor(32, 90);
+                canvas.print(m1);
+
+                canvas.setTextColor((ctx.bootMenuMode == 2) ? CYAN : LIGHTGREY, BLACK);
+                canvas.setCursor(32, 105);
+                canvas.print(m2);
             }
 
             // 图层 4: 底栏 Footer 引导
-            const char* homeFooter = isCN ? "[上下] 切换模式  [ENTER] 开始测试" : "[UP/DN] Select Mode  [ENTER] Start";
+            const char* homeFooter = isCN ? "[上下] 模式  [ENTER] 开始" : "[UP/DN] Mode  [ENTER] Start";
             drawFooter(homeFooter, isCN);
 
             if (ctx.totalPlays > 0) {
@@ -174,6 +178,49 @@ void renderUI(const UIContext& ctx) {
                 canvas.setCursor(185, 5);
                 canvas.printf("PLS:%d", ctx.totalPlays);
             }
+            break;
+        }
+
+        case AppState::MY_PROFILE: {
+            // 真实长效 MBTI 人格画像看板
+            drawHeader(isCN ? "长效真实人格画像" : "LONG-TERM MBTI PROFILE", isCN);
+
+            // 左侧绘制 NVS 累积极坐标发光雷达图 (centerX = 62, centerY = 68, radius = 35)
+            drawRadarChart(canvas, 62, 68, 35, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
+
+            if (isCN) canvas.setFont(&fonts::efontCN_12);
+            else canvas.setFont(&fonts::Font0);
+
+            // 右侧信息面板
+            canvas.setTextSize(1);
+            canvas.setTextColor(WHITE, BLACK);
+            canvas.setCursor(120, 28);
+            canvas.print(isCN ? "收敛人格:" : "LONG-TERM:");
+
+            canvas.setFont(&fonts::Font0);
+            canvas.setTextSize(2);
+            canvas.setTextColor(YELLOW, BLACK);
+            canvas.setCursor(120, 42);
+            canvas.print(getMBTIName(ctx.userHistory.dominantMBTI));
+
+            if (isCN) canvas.setFont(&fonts::efontCN_12);
+            else canvas.setFont(&fonts::Font0);
+
+            canvas.setTextSize(1);
+            canvas.setTextColor(CYAN, BLACK);
+            canvas.setCursor(120, 62);
+            canvas.printf(isCN ? "置信度: %.1f%%" : "Confid: %.1f%%", ctx.userHistory.dominantSimilarity);
+
+            canvas.setTextColor(WHITE, BLACK);
+            canvas.setCursor(120, 78);
+            canvas.printf(isCN ? "测试场数: %d 场" : "Tested : %d", ctx.userHistory.totalPlays);
+
+            canvas.setTextColor(LIGHTGREY, BLACK);
+            canvas.setCursor(120, 94);
+            canvas.printf(isCN ? "同意%d 拒绝%d 犹豫%d" : "Y:%d N:%d M:%d",
+                          ctx.userHistory.yesCount, ctx.userHistory.noCount, ctx.userHistory.maybeCount);
+
+            drawFooter(isCN ? "[ENTER/ESC] 返回主菜单" : "[ENTER/ESC] Back", isCN);
             break;
         }
 
@@ -232,8 +279,6 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::BUILDER_PREVIEW: {
-            // 【Phase 4 规范：Decide First, Discover Later】
-            // 纯粹、全屏宽大字展现场景题目与描述！彻底移除混淆的右侧雷达图！
             drawHeader(isCN ? "场景预览" : "SCENARIO PREVIEW", isCN);
             
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -249,7 +294,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(8, 46);
             
-            // 占用全屏宽 (X = 8 ~ 232) 自动折行打印场景描述
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             int lineY = 46;
@@ -295,17 +339,14 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::YOUR_MATCH: {
-            // 【Phase 4 Reveal 揭晓屏】：同时优雅呈现【本题决策雷达图】+【最吻合人格】+【最大分歧人格】
             drawHeader(isCN ? "你的决策轮廓" : "YOUR DECISION PROFILE", isCN);
             
-            // 左侧绘制用户本题决策轮廓雷达图 (centerX = 62, centerY = 68, radius = 35)
             drawRadarChart(canvas, 62, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
-            // 右侧区域 (X = 124 ~ 238) 精密双栏布局
-            // 1. 最吻合 MBTI (MOST LIKE)
+            // 右侧区域 (X = 124 ~ 238)
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(124, 28);
@@ -317,7 +358,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(124, 42);
             canvas.printf("%s (%.1f%%)", getMBTIName(ctx.closestMBTI), ctx.matchSimilarity);
 
-            // 2. 最大分歧 MBTI (BIGGEST DIFFERENCE)
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
@@ -333,7 +373,6 @@ void renderUI(const UIContext& ctx) {
             const char* diffDecTxt = isCN ? getDecisionNameCN(ctx.biggestDiffDecision) : getDecisionName(ctx.biggestDiffDecision);
             canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
 
-            // 3. 用户选择
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
@@ -360,10 +399,8 @@ void renderUI(const UIContext& ctx) {
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle, isCN);
 
-            // 右侧区域(centerX = 180, centerY = 68, radius = 35) 带防越界卡死保护与双语轴标签
             drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, CYAN, DARKCYAN, true, isCN);
 
-            // 左侧区域
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
@@ -372,7 +409,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 28);
             canvas.print(isCN ? "选择: " : "Choice: ");
 
-            // 决策结果 YES / NO / MAYBE 中英文翻译
             const char* decName = isCN ? getDecisionNameCN(res.decision) : getDecisionName(res.decision);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -400,7 +436,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextColor(CYAN, BLACK);
             canvas.print(isCN ? "依据:" : "Reason:");
 
-            // 决策依据理由双语映射 (英文原因转换为地道中文)
             const char* pReason = isCN ? getDecisionReasonCN(res.reason) : res.reason;
             int lineY = 79;
             while (*pReason && lineY <= 105) {
@@ -441,10 +476,8 @@ void renderUI(const UIContext& ctx) {
             break;
     }
 
-    // 离屏画布单次推送
     canvas.pushSprite(0, 0);
 #else
-    // 降级控制台调试打印
     static AppState lastState = (AppState)-1;
     if (lastState != ctx.state) {
         lastState = ctx.state;
