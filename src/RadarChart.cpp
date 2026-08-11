@@ -7,15 +7,14 @@
 #define M_PI 3.14159265358979323846f
 #endif
 
-// 极客低调暗柔 25% 稀疏网点半透明三角形填充算法
-// 降低 75% 亮度刺眼感，呈现低调高级的微光暗夜纱罩透射
-static void drawDitherTriangle(M5Canvas& canvas, int x0, int y0, int x1, int y1, int x2, int y2, uint16_t color) {
+// 真实 RGB565 像素级平滑 Alpha 物理混合算法 (True Smooth Pixel-Level Alpha Blending)
+// 告别点阵颗粒，读取底层画布背景色彩并按 25% 比例进行连续色彩融合，呈现柔和物理半透玻璃感
+static void drawSmoothAlphaTriangle(M5Canvas& canvas, int x0, int y0, int x1, int y1, int x2, int y2, uint16_t fgColor) {
     int minX = std::min({x0, x1, x2});
     int maxX = std::max({x0, x1, x2});
     int minY = std::min({y0, y1, y2});
     int maxY = std::max({y0, y1, y2});
 
-    // 边界裁剪
     minX = std::max(0, minX);
     maxX = std::min(239, maxX);
     minY = std::max(0, minY);
@@ -24,16 +23,34 @@ static void drawDitherTriangle(M5Canvas& canvas, int x0, int y0, int x1, int y1,
     float denominator = static_cast<float>((y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2));
     if (fabsf(denominator) < 0.0001f) return;
 
+    // 前景 RGB565 解包
+    uint8_t rFg = (fgColor >> 11) & 0x1F;
+    uint8_t gFg = (fgColor >> 5) & 0x3F;
+    uint8_t bFg = fgColor & 0x1F;
+
     for (int y = minY; y <= maxY; ++y) {
         for (int x = minX; x <= maxX; ++x) {
-            // 25% 稀疏打孔 (x与y均偶数时绘制点像素)，极大降低亮度
-            if ((x % 2 == 0) && (y % 2 == 0)) {
-                float w0 = ((y1 - y2) * (x - x2) + (x2 - x1) * (y - y2)) / denominator;
-                float w1 = ((y2 - y0) * (x - x2) + (x0 - x2) * (y - y2)) / denominator;
-                float w2 = 1.0f - w0 - w1;
+            float w0 = ((y1 - y2) * (x - x2) + (x2 - x1) * (y - y2)) / denominator;
+            float w1 = ((y2 - y0) * (x - x2) + (x0 - x2) * (y - y2)) / denominator;
+            float w2 = 1.0f - w0 - w1;
 
-                if (w0 >= 0.0f && w1 >= 0.0f && w2 >= 0.0f) {
-                    canvas.drawPixel(x, y, color);
+            if (w0 >= 0.0f && w1 >= 0.0f && w2 >= 0.0f) {
+                uint16_t bg = canvas.readPixel(x, y);
+                if (bg == 0) {
+                    // 黑背景上微光填色
+                    canvas.drawPixel(x, y, 0x016A); 
+                } else {
+                    // 真实像素级 Alpha 混合 (75% 背景 + 25% 前景)
+                    uint8_t rBg = (bg >> 11) & 0x1F;
+                    uint8_t gBg = (bg >> 5) & 0x3F;
+                    uint8_t bBg = bg & 0x1F;
+
+                    uint8_t rOut = (rBg * 3 + rFg) >> 2;
+                    uint8_t gOut = (gBg * 3 + gFg) >> 2;
+                    uint8_t bOut = (bBg * 3 + bFg) >> 2;
+
+                    uint16_t blended = (rOut << 11) | (gOut << 5) | bOut;
+                    canvas.drawPixel(x, y, blended);
                 }
             }
         }
@@ -63,11 +80,11 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
         vy[i] = centerY + static_cast<int>(r * sinf(angle));
     }
 
-    // 2. 【图层 1: 暗柔低高光 25% 稀疏网点内衬】(采用 DARKCYAN 低调暗青，绝无刺眼亮感)
-    uint16_t mutedDitherColor = DARKCYAN; // 低调沉稳暗青色
+    // 2. 【图层 1: 真实平滑 Alpha 磨砂玻璃内衬】(完全消失点阵颗粒，75% 背景 + 25% 青蓝物理色彩融合)
+    uint16_t cyanAlphaFg = 0x03FF; // 柔和极光青蓝色
     for (int i = 0; i < 6; ++i) {
         int next = (i + 1) % 6;
-        drawDitherTriangle(canvas, centerX, centerY, vx[i], vy[i], vx[next], vy[next], mutedDitherColor);
+        drawSmoothAlphaTriangle(canvas, centerX, centerY, vx[i], vy[i], vx[next], vy[next], cyanAlphaFg);
     }
 
     // 3. 【图层 2: 坐标系同心网格线与放射轴】
