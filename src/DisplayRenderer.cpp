@@ -129,23 +129,23 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 【图层 0 (最底层 Layer 0)】: 先在黑屏画布最底部绘制亮黄色 YELLOW PARALLEL 大字
+            // 【图层 0 (最底层 Layer 0)】: 在黑屏最底部绘制亮黄色 PARALLEL 大字
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(3);
-            canvas.setCursor(48, 30);
+            canvas.setCursor(48, 38);
             canvas.print("PARALLEL");
 
-            // 【图层 1 (中间与上层 Layer 1 & 2)】: 在黄色 PARALLEL 大字上方叠加半透网点发光雷达图
-            // Dither 半透算法保证背后的黄色大字透过雷达数据区域清晰可见！
-            drawRadarChart(canvas, 120, 46, 38, homeData, GREEN, DARKCYAN, false, isCN);
+            // 【图层 1 & 2 (中间与上层 Layer 1 & 2)】: 48px 巨幅雷达 Logo (中心点 120, 55, 半径 48px)
+            // 真实 25% Smooth Alpha 磨砂玻璃平滑透射，背后的黄色 PARALLEL 大字沉浸发光！
+            drawRadarChart(canvas, 120, 55, 48, homeData, GREEN, DARKCYAN, false, isCN);
 
-            // 【图层 3】: 开机精简 3 选项横向排列
+            // 【图层 3】: 【开机选项下移至 Y = 118 贴近底部】([1. 随机] [2. 自定义] [3. 画像])
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
 
-                int yPos = 104;
+                int yPos = 118;
                 if (ctx.bootMenuMode == 0) {
                     canvas.setTextColor(CYAN, BLACK);
                     canvas.setCursor(6, yPos);
@@ -179,7 +179,7 @@ void renderUI(const UIContext& ctx) {
                 canvas.setFont(&fonts::Font0);
                 canvas.setTextSize(1);
 
-                int yPos = 104;
+                int yPos = 118;
                 if (ctx.bootMenuMode == 0) {
                     canvas.setTextColor(CYAN, BLACK);
                     canvas.setCursor(6, yPos);
@@ -211,9 +211,7 @@ void renderUI(const UIContext& ctx) {
                 }
             }
 
-            // 【图层 4】: 底栏 Footer 引导
-            const char* homeFooter = isCN ? "[左右] 移动选项  [ENTER] 开始" : "[L/R] Move  [ENTER] Start";
-            drawFooter(homeFooter, isCN);
+            // 【完全移除开机屏 drawFooter 冗余提示，呈现极简高雅气场】
 
             if (ctx.totalPlays > 0) {
                 canvas.setFont(&fonts::Font0);
