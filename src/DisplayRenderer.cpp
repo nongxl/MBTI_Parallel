@@ -225,7 +225,6 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::MY_PROFILE_CLEAR_CONFIRM: {
-            // 清空历史二次确认警告弹窗
             drawHeader(isCN ? "⚠️ 清空历史确认" : "⚠️ CLEAR HISTORY", isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -236,7 +235,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(10, 32);
             canvas.print(isCN ? "确定擦除所有决策历史与真实人格吗？" : "Clear all decision history & profile?");
 
-            // 二级选项 1. 清空 / 2. 取消
             if (ctx.selectedMenuIndex == 0) {
                 canvas.setTextColor(RED, BLACK);
                 canvas.setCursor(20, 60);
@@ -372,46 +370,51 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::YOUR_MATCH: {
+            // 【规范强化：统一左侧文本信息，右侧绘制六边形雷达图】
             drawHeader(isCN ? "你的决策轮廓" : "YOUR DECISION PROFILE", isCN);
             
-            drawRadarChart(canvas, 62, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
+            // 右侧区域 (centerX = 180, centerY = 68, radius = 35) 绘制雷达图
+            drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
 
+            // 左侧区域 (X = 6 ~ 124) 展示文本信息
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
-            // 右侧区域 (X = 124 ~ 238)
+            // 1. 最吻合 MBTI (MOST LIKE)
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(124, 28);
+            canvas.setCursor(6, 28);
             canvas.print(isCN ? "最像人格:" : "MOST LIKE:");
 
             canvas.setFont(&fonts::Font0);
             canvas.setTextSize(1);
             canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(124, 42);
+            canvas.setCursor(6, 42);
             canvas.printf("%s (%.1f%%)", getMBTIName(ctx.closestMBTI), ctx.matchSimilarity);
 
+            // 2. 最大分歧 MBTI (BIGGEST DIFFERENCE)
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
             canvas.setTextSize(1);
             canvas.setTextColor(LIGHTGREY, BLACK);
-            canvas.setCursor(124, 62);
+            canvas.setCursor(6, 60);
             canvas.print(isCN ? "最大分歧:" : "BIGGEST DIFF:");
 
             canvas.setFont(&fonts::Font0);
             canvas.setTextSize(1);
             canvas.setTextColor(RED, BLACK);
-            canvas.setCursor(124, 76);
+            canvas.setCursor(6, 74);
             const char* diffDecTxt = isCN ? getDecisionNameCN(ctx.biggestDiffDecision) : getDecisionName(ctx.biggestDiffDecision);
             canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
 
+            // 3. 用户选择 (YOUR CHOICE)
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
             canvas.setTextSize(1);
             canvas.setTextColor(CYAN, BLACK);
-            canvas.setCursor(124, 96);
+            canvas.setCursor(6, 94);
             const char* myDecTxt = isCN ? getDecisionNameCN(ctx.userChoice) : getDecisionName(ctx.userChoice);
             canvas.printf(isCN ? "你的选择: %s" : "YOURS: %s", myDecTxt);
 
