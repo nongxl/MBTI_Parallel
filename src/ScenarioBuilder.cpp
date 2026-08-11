@@ -1,125 +1,83 @@
 #include "ScenarioBuilder.h"
+#include <cstdio>
+#include <cstring>
 
-const char* getDecisionTypeName(DecisionType type) {
-    switch (type) {
-        case DecisionType::GET: return "GET";
-        case DecisionType::GO: return "GO";
-        case DecisionType::DO: return "DO";
-        case DecisionType::SAY: return "SAY";
-        case DecisionType::CHOOSE: return "CHOOSE";
-        case DecisionType::KEEP: return "KEEP";
-        case DecisionType::QUIT: return "QUIT";
-        case DecisionType::CHANGE: return "CHANGE";
-        case DecisionType::ACCEPT: return "ACCEPT";
-        case DecisionType::REFUSE: return "REFUSE";
-        case DecisionType::WAIT: return "WAIT";
-        case DecisionType::RISK: return "RISK";
-        default: return "DECIDE";
+const char* getWhoName(WhoType who, bool isCN) {
+    switch (who) {
+        case WhoType::FRIEND:       return isCN ? "朋友" : "FRIEND";
+        case WhoType::COWORKER:     return isCN ? "同事" : "COWORKER";
+        case WhoType::STRANGER:     return isCN ? "陌生人" : "STRANGER";
+        case WhoType::GROUP:        return isCN ? "一群人" : "GROUP";
+        case WhoType::MYSELF:       return isCN ? "自己" : "MYSELF";
+        case WhoType::ACQUAINTANCE: return isCN ? "熟人" : "KNOWN PEER";
     }
+    return "UNKNOWN";
 }
 
-const char* getMotivationName(Motivation motivation) {
-    switch (motivation) {
-        case Motivation::WANT: return "WANT";
-        case Motivation::NEED: return "NEED";
-        case Motivation::CURIOUS: return "CURIOUS";
-        case Motivation::OPPORTUNITY: return "OPPORTUNITY";
-        case Motivation::FUN: return "FUN";
-        case Motivation::PEOPLE: return "PEOPLE";
-        case Motivation::CHANGE: return "CHANGE";
-        default: return "UNKNOWN";
+const char* getSituationName(SituationType sit, bool isCN) {
+    switch (sit) {
+        case SituationType::TRAVEL:     return isCN ? "出行旅游" : "TRAVEL";
+        case SituationType::INVITATION: return isCN ? "聚会邀约" : "INVITATION";
+        case SituationType::PURCHASE:   return isCN ? "购物消费" : "PURCHASE";
+        case SituationType::HELP:       return isCN ? "寻求帮助" : "HELP NEEDED";
+        case SituationType::HOBBY:      return isCN ? "兴趣尝试" : "HOBBY TRY";
+        case SituationType::CHALLENGE:  return isCN ? "重大挑战" : "CHALLENGE";
     }
+    return "UNKNOWN";
 }
 
-const char* getConcernName(Concern concern) {
-    switch (concern) {
-        case Concern::RISK: return "RISK";
-        case Concern::COST: return "COST";
-        case Concern::TIME: return "TIME";
-        case Concern::EFFORT: return "EFFORT";
-        case Concern::PEOPLE: return "PEOPLE";
-        case Concern::UNKNOWN: return "UNKNOWN";
-        case Concern::NONE: return "NONE";
-        default: return "NONE";
+const char* getConditionName(ConditionType cond, bool isCN) {
+    switch (cond) {
+        case ConditionType::LAST_MINUTE: return isCN ? "临时决定" : "LAST MINUTE";
+        case ConditionType::UNKNOWN:     return isCN ? "完全未知" : "UNKNOWN";
+        case ConditionType::EXPENSIVE:   return isCN ? "花费较高" : "EXPENSIVE";
+        case ConditionType::RISKY:       return isCN ? "高风险性" : "HIGH RISK";
+        case ConditionType::NO_PLAN:     return isCN ? "毫无计划" : "NO PLAN";
+        case ConditionType::UNEXPECTED:  return isCN ? "出乎意料" : "UNEXPECTED";
     }
+    return "UNKNOWN";
 }
 
-const char* getIntensityName(Intensity intensity) {
-    switch (intensity) {
-        case Intensity::LOW: return "LOW";
-        case Intensity::MEDIUM: return "MEDIUM";
-        case Intensity::HIGH: return "HIGH";
-        default: return "MEDIUM";
+const char* getTensionName(TensionType ten, bool isCN) {
+    switch (ten) {
+        case TensionType::SAFETY_VS_NOVELTY:   return isCN ? "安全 / 新鲜" : "SAFETY / NOVELTY";
+        case TensionType::PLAN_VS_IMPROVISE:   return isCN ? "计划 / 即兴" : "PLAN / IMPROVISE";
+        case TensionType::SAVE_VS_ENJOY:       return isCN ? "省钱 / 享受" : "SAVE / ENJOY";
+        case TensionType::ALONE_VS_SOCIAL:     return isCN ? "独处 / 社交" : "ALONE / SOCIAL";
+        case TensionType::CERTAIN_VS_UNKNOWN:  return isCN ? "确定 / 未知" : "CERTAIN / UNKNOWN";
+        case TensionType::EASY_VS_CHALLENGE:   return isCN ? "轻松 / 挑战" : "EASY / CHALLENGE";
     }
+    return "UNKNOWN";
 }
 
-const char* getPriorityName(Priority priority) {
-    switch (priority) {
-        case Priority::EXPERIENCE: return "EXPERIENCE";
-        case Priority::PRACTICAL: return "PRACTICAL";
-        case Priority::PEOPLE: return "PEOPLE";
-        case Priority::SAFETY: return "SAFETY";
-        default: return "EXPERIENCE";
-    }
-}
+RenderedCustomScenario renderCustomScenario(const CustomScenarioDNA& dna) {
+    RenderedCustomScenario res;
+    res.dna = dna;
 
-// 预置 10 个轻量 RANDOM Scenario 库
-static const RandomPreset RANDOM_PRESETS[RANDOM_PRESET_COUNT] = {
-    {
-        "LAST-MINUTE TRIP",
-        "A friend invites you on an impulse weekend trip tomorrow.",
-        { DecisionType::GO, 60.0f, 65.0f, 70.0f, 85.0f, 75.0f, 50.0f, 60.0f, 80.0f, 20.0f }
-    },
-    {
-        "TRY A NEW HOBBY",
-        "Start learning a completely unfamiliar skill this month.",
-        { DecisionType::DO, 30.0f, 40.0f, 60.0f, 90.0f, 30.0f, 70.0f, 40.0f, 85.0f, 30.0f }
-    },
-    {
-        "BUY SOMETHING DESIRED",
-        "Buy a premium gadget you've wanted for months.",
-        { DecisionType::GET, 20.0f, 85.0f, 10.0f, 70.0f, 15.0f, 10.0f, 10.0f, 90.0f, 40.0f }
-    },
-    {
-        "JOIN UNFAMILIAR PARTY",
-        "Attend a social gathering where you barely know anyone.",
-        { DecisionType::GO, 45.0f, 20.0f, 40.0f, 65.0f, 95.0f, 60.0f, 50.0f, 60.0f, 15.0f }
-    },
-    {
-        "CHANGE YOUR PLAN",
-        "Completely scrap your weekend schedule for a new chance.",
-        { DecisionType::CHANGE, 50.0f, 30.0f, 50.0f, 85.0f, 40.0f, 40.0f, 75.0f, 70.0f, 25.0f }
-    },
-    {
-        "CAREER OPPORTUNITY",
-        "Take on a high-risk high-reward project at work.",
-        { DecisionType::ACCEPT, 80.0f, 30.0f, 80.0f, 75.0f, 45.0f, 85.0f, 70.0f, 40.0f, 90.0f }
-    },
-    {
-        "TELL THE TRUTH",
-        "Express your honest feelings to a close friend.",
-        { DecisionType::SAY, 40.0f, 10.0f, 20.0f, 30.0f, 90.0f, 30.0f, 40.0f, 85.0f, 30.0f }
-    },
-    {
-        "EARLY LEAVE",
-        "Notice boss is away. Leave office 30 minutes early?",
-        { DecisionType::QUIT, 65.0f, 10.0f, 30.0f, 40.0f, 20.0f, 10.0f, 50.0f, 60.0f, 20.0f }
-    },
-    {
-        "TRY STRANGE RESTAURANT",
-        "Eat at an unusual non-reviewed local food spot.",
-        { DecisionType::CHOOSE, 40.0f, 30.0f, 30.0f, 85.0f, 20.0f, 20.0f, 45.0f, 70.0f, 30.0f }
-    },
-    {
-        "RECONNECT OLD FRIEND",
-        "Message a school friend you haven't talked to in years.",
-        { DecisionType::DO, 25.0f, 10.0f, 20.0f, 50.0f, 85.0f, 20.0f, 35.0f, 80.0f, 20.0f }
-    }
-};
+    // 确定 Scenario 向量属性 (0 ~ 100)
+    res.scenario.type = DecisionType::DO;
+    res.scenario.risk = (dna.condition == ConditionType::RISKY) ? 85.0f : ((dna.tension == TensionType::SAFETY_VS_NOVELTY) ? 65.0f : 30.0f);
+    res.scenario.novelty = (dna.tension == TensionType::SAFETY_VS_NOVELTY || dna.condition == ConditionType::UNKNOWN) ? 85.0f : 45.0f;
+    res.scenario.social = (dna.who == WhoType::GROUP || dna.who == WhoType::FRIEND || dna.tension == TensionType::ALONE_VS_SOCIAL) ? 80.0f : 20.0f;
+    res.scenario.uncertainty = (dna.condition == ConditionType::NO_PLAN || dna.condition == ConditionType::UNKNOWN) ? 85.0f : 35.0f;
+    res.scenario.time = (dna.condition == ConditionType::LAST_MINUTE) ? 85.0f : 40.0f;
+    res.scenario.cost = (dna.condition == ConditionType::EXPENSIVE) ? 80.0f : 30.0f;
+    res.scenario.effort = 40.0f;
+    res.scenario.emotionalValue = (dna.tension == TensionType::SAVE_VS_ENJOY) ? 85.0f : 45.0f;
+    res.scenario.practicalValue = (dna.tension == TensionType::PLAN_VS_IMPROVISE) ? 80.0f : 40.0f;
 
-const RandomPreset& getRandomPreset(int index) {
-    if (index < 0 || index >= RANDOM_PRESET_COUNT) {
-        return RANDOM_PRESETS[0];
-    }
-    return RANDOM_PRESETS[index];
+    // 拼接场景标题与中英文句子
+    snprintf(res.titleEN, sizeof(res.titleEN), "%s %s", getWhoName(dna.who, false), getSituationName(dna.situation, false));
+    snprintf(res.titleCN, sizeof(res.titleCN), "%s%s场景", getWhoName(dna.who, true), getSituationName(dna.situation, true));
+
+    // 根据 4 步组合渲染地道中英文句式
+    snprintf(res.descEN, sizeof(res.descEN), "%s asks for %s under %s conditions (%s).",
+             getWhoName(dna.who, false), getSituationName(dna.situation, false),
+             getConditionName(dna.condition, false), getTensionName(dna.tension, false));
+
+    snprintf(res.descCN, sizeof(res.descCN), "%s提出进行%s，面临%s情况(%s)，你同意吗？",
+             getWhoName(dna.who, true), getSituationName(dna.situation, true),
+             getConditionName(dna.condition, true), getTensionName(dna.tension, true));
+
+    return res;
 }

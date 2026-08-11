@@ -12,11 +12,10 @@
 
 enum class AppState {
     HOME,
-    BUILDER_TYPE,
-    BUILDER_MOTIVATION,
-    BUILDER_CONCERN,
-    BUILDER_INTENSITY,
-    BUILDER_PRIORITY,
+    BUILDER_WHO,        // Step 1: WHO
+    BUILDER_SITUATION,  // Step 2: SITUATION
+    BUILDER_CONDITION,  // Step 3: CONDITION
+    BUILDER_TENSION,    // Step 4: TENSION
     BUILDER_PREVIEW,
     SIMULATING,
     SUMMARY,
@@ -51,6 +50,9 @@ enum class Language {
 struct UIContext {
     AppState state;
     Language lang; // 当前语言设置 (ENGLISH / CHINESE)
+
+    // 自定义决策场景 4 步 DNA
+    CustomScenarioDNA customDNA;
 
     UserSelection currentSelection;
     Scenario currentScenario;

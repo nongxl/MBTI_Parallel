@@ -3,6 +3,7 @@
 #include "DisplayRenderer.h"
 #include "DecisionProfile.h"
 #include "ScenarioGenerator.h"
+#include "ScenarioBuilder.h"
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -70,7 +71,6 @@ static void findBiggestDifferenceMBTI(const UIContext& ctx, MBTIType& outDiffMBT
 
         float dist = sqrtf(dRisk*dRisk + dNov*dNov + dLog*dLog + dSoc*dSoc + dPla*dPla + dPra*dPra);
 
-        // 如果决策相反，额外给予大权重阻尼奖赏
         if (ctx.results[i].decision != ctx.userChoice) {
             dist += 40.0f;
         }
@@ -92,7 +92,6 @@ static void triggerRandomScenario(UIContext& ctx) {
     snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "%s", gen.titleCN);
     snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "%s", gen.descriptionCN);
 
-    // 将选出的 DNA 压入 10 次历史记录
     for (int i = RECENT_DNA_HISTORY_SIZE - 1; i > 0; --i) {
         ctx.recentDNAs[i] = ctx.recentDNAs[i - 1];
     }
@@ -100,6 +99,15 @@ static void triggerRandomScenario(UIContext& ctx) {
     if (ctx.dnaHistoryCount < RECENT_DNA_HISTORY_SIZE) {
         ctx.dnaHistoryCount++;
     }
+}
+
+static void applyCustomScenario(UIContext& ctx) {
+    RenderedCustomScenario rendered = renderCustomScenario(ctx.customDNA);
+    ctx.currentScenario = rendered.scenario;
+    snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", rendered.titleEN);
+    snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "%s", rendered.descEN);
+    snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "%s", rendered.titleCN);
+    snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "%s", rendered.descCN);
 }
 
 void initApp(UIContext& ctx) {
@@ -113,6 +121,12 @@ void initApp(UIContext& ctx) {
     ctx.totalPlays = 0;
     ctx.dnaHistoryCount = 0;
 
+    // 默认自定义 4 步 DNA
+    ctx.customDNA.who = WhoType::FRIEND;
+    ctx.customDNA.situation = SituationType::TRAVEL;
+    ctx.customDNA.condition = ConditionType::LAST_MINUTE;
+    ctx.customDNA.tension = TensionType::SAFETY_VS_NOVELTY;
+
     // 雷达插值变量初始化
     ctx.isRadarAnimActive = false;
     ctx.radarAnimStartTime = 0;
@@ -120,19 +134,8 @@ void initApp(UIContext& ctx) {
     ctx.startRadar = ctx.currentRadar;
     ctx.endRadar = ctx.currentRadar;
 
-    // 默认初始 Selection
-    ctx.currentSelection.decisionType = DecisionType::GET;
-    ctx.currentSelection.motivation = Motivation::WANT;
-    ctx.currentSelection.concern = Concern::COST;
-    ctx.currentSelection.intensity = Intensity::MEDIUM;
-    ctx.currentSelection.priority = Priority::EXPERIENCE;
+    applyCustomScenario(ctx);
 
-    snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "CUSTOM SCENARIO");
-    snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "User-constructed decision scenario.");
-    snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "自定义模拟场景");
-    snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "用户自定义建立的决策测试场景。");
-
-    ctx.currentScenario = buildScenario(ctx.currentSelection);
     ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
     ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
     ctx.biggestDiffMBTI = MBTIType::ESTJ;
@@ -141,7 +144,6 @@ void initApp(UIContext& ctx) {
 }
 
 void updateApp(UIContext& ctx, uint32_t currentMillis) {
-    // 1. 处理模拟分支进度条动效
     if (ctx.state == AppState::SIMULATING) {
         if (ctx.animStartTime == 0) {
             ctx.animStartTime = currentMillis;
@@ -162,7 +164,6 @@ void updateApp(UIContext& ctx, uint32_t currentMillis) {
         }
     }
 
-    // 2. 处理六维雷达极坐标平滑补间形变插值 (400ms Quintic Ease-Out 高阶五次方丝滑缓动)
     if (ctx.isRadarAnimActive) {
         uint32_t elapsed = currentMillis - ctx.radarAnimStartTime;
         float rawT = elapsed / 400.0f;
@@ -189,17 +190,22 @@ void handleInput(UIContext& ctx, KeyInput key) {
     switch (ctx.state) {
         case AppState::HOME:
             if (key == KeyInput::LEFT) {
-                ctx.lang = Language::CHINESE; // 左键切选中文
+                ctx.lang = Language::CHINESE;
             } else if (key == KeyInput::RIGHT) {
-                ctx.lang = Language::ENGLISH; // 右键切选英文
+                ctx.lang = Language::ENGLISH;
+            } else if (key == KeyInput::UP) { // 选 1: 随机场景模式
+                triggerRandomScenario(ctx);
+                ctx.state = AppState::BUILDER_PREVIEW;
+            } else if (key == KeyInput::DOWN) { // 选 2: 自定义场景构造模式 (4 步选词)
+                ctx.state = AppState::BUILDER_WHO;
+                ctx.selectedMenuIndex = 0;
             } else if (key == KeyInput::ENTER) {
-                // 锁存语言并触发程序化场景开局
                 triggerRandomScenario(ctx);
                 ctx.state = AppState::BUILDER_PREVIEW;
             }
             break;
 
-        case AppState::BUILDER_TYPE: {
+        case AppState::BUILDER_WHO: { // Step 1: WHO
             int idx = ctx.selectedMenuIndex;
             if (key == KeyInput::LEFT) {
                 if (idx % 2 == 1) idx--;
@@ -210,9 +216,8 @@ void handleInput(UIContext& ctx, KeyInput key) {
             } else if (key == KeyInput::DOWN) {
                 if (idx + 2 < 6) idx += 2;
             } else if (key == KeyInput::ENTER) {
-                DecisionType types[] = { DecisionType::GET, DecisionType::GO, DecisionType::DO, DecisionType::SAY, DecisionType::CHOOSE, DecisionType::CHANGE };
-                ctx.currentSelection.decisionType = types[idx];
-                ctx.state = AppState::BUILDER_MOTIVATION;
+                ctx.customDNA.who = static_cast<WhoType>(idx);
+                ctx.state = AppState::BUILDER_SITUATION;
                 ctx.selectedMenuIndex = 0;
                 return;
             } else if (key == KeyInput::BACK) {
@@ -224,32 +229,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
             break;
         }
 
-        case AppState::BUILDER_MOTIVATION: {
-            int idx = ctx.selectedMenuIndex;
-            if (key == KeyInput::LEFT) {
-                if (idx % 2 == 1) idx--;
-            } else if (key == KeyInput::RIGHT) {
-                if (idx % 2 == 0 && idx + 1 < 5) idx++;
-            } else if (key == KeyInput::UP) {
-                if (idx >= 2) idx -= 2;
-            } else if (key == KeyInput::DOWN) {
-                if (idx + 2 < 5) idx += 2;
-            } else if (key == KeyInput::ENTER) {
-                Motivation m[] = { Motivation::WANT, Motivation::NEED, Motivation::CURIOUS, Motivation::FUN, Motivation::OPPORTUNITY };
-                ctx.currentSelection.motivation = m[idx];
-                ctx.state = AppState::BUILDER_CONCERN;
-                ctx.selectedMenuIndex = 0;
-                return;
-            } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::BUILDER_TYPE;
-                ctx.selectedMenuIndex = 0;
-                return;
-            }
-            ctx.selectedMenuIndex = idx;
-            break;
-        }
-
-        case AppState::BUILDER_CONCERN: {
+        case AppState::BUILDER_SITUATION: { // Step 2: SITUATION
             int idx = ctx.selectedMenuIndex;
             if (key == KeyInput::LEFT) {
                 if (idx % 2 == 1) idx--;
@@ -260,13 +240,12 @@ void handleInput(UIContext& ctx, KeyInput key) {
             } else if (key == KeyInput::DOWN) {
                 if (idx + 2 < 6) idx += 2;
             } else if (key == KeyInput::ENTER) {
-                Concern c[] = { Concern::RISK, Concern::COST, Concern::TIME, Concern::EFFORT, Concern::UNKNOWN, Concern::NONE };
-                ctx.currentSelection.concern = c[idx];
-                ctx.state = AppState::BUILDER_INTENSITY;
+                ctx.customDNA.situation = static_cast<SituationType>(idx);
+                ctx.state = AppState::BUILDER_CONDITION;
                 ctx.selectedMenuIndex = 0;
                 return;
             } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::BUILDER_MOTIVATION;
+                ctx.state = AppState::BUILDER_WHO;
                 ctx.selectedMenuIndex = 0;
                 return;
             }
@@ -274,49 +253,47 @@ void handleInput(UIContext& ctx, KeyInput key) {
             break;
         }
 
-        case AppState::BUILDER_INTENSITY: {
-            int idx = ctx.selectedMenuIndex;
-            if (key == KeyInput::LEFT) {
-                if (idx > 0) idx--;
-            } else if (key == KeyInput::RIGHT) {
-                if (idx < 2) idx++;
-            } else if (key == KeyInput::ENTER) {
-                Intensity intens[] = { Intensity::LOW, Intensity::MEDIUM, Intensity::HIGH };
-                ctx.currentSelection.intensity = intens[idx];
-                ctx.state = AppState::BUILDER_PRIORITY;
-                ctx.selectedMenuIndex = 0;
-                return;
-            } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::BUILDER_CONCERN;
-                ctx.selectedMenuIndex = 0;
-                return;
-            }
-            ctx.selectedMenuIndex = idx;
-            break;
-        }
-
-        case AppState::BUILDER_PRIORITY: {
+        case AppState::BUILDER_CONDITION: { // Step 3: CONDITION
             int idx = ctx.selectedMenuIndex;
             if (key == KeyInput::LEFT) {
                 if (idx % 2 == 1) idx--;
             } else if (key == KeyInput::RIGHT) {
-                if (idx % 2 == 0 && idx + 1 < 4) idx++;
+                if (idx % 2 == 0 && idx + 1 < 6) idx++;
             } else if (key == KeyInput::UP) {
                 if (idx >= 2) idx -= 2;
             } else if (key == KeyInput::DOWN) {
-                if (idx + 2 < 4) idx += 2;
+                if (idx + 2 < 6) idx += 2;
             } else if (key == KeyInput::ENTER) {
-                Priority p[] = { Priority::EXPERIENCE, Priority::PRACTICAL, Priority::PEOPLE, Priority::SAFETY };
-                ctx.currentSelection.priority = p[idx];
-                snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "CUSTOM SCENARIO");
-                snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "User-constructed decision scenario.");
-                snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "自定义模拟场景");
-                snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "用户自定义建立的决策测试场景。");
-                ctx.currentScenario = buildScenario(ctx.currentSelection);
+                ctx.customDNA.condition = static_cast<ConditionType>(idx);
+                ctx.state = AppState::BUILDER_TENSION;
+                ctx.selectedMenuIndex = 0;
+                return;
+            } else if (key == KeyInput::BACK) {
+                ctx.state = AppState::BUILDER_SITUATION;
+                ctx.selectedMenuIndex = 0;
+                return;
+            }
+            ctx.selectedMenuIndex = idx;
+            break;
+        }
+
+        case AppState::BUILDER_TENSION: { // Step 4: TENSION
+            int idx = ctx.selectedMenuIndex;
+            if (key == KeyInput::LEFT) {
+                if (idx % 2 == 1) idx--;
+            } else if (key == KeyInput::RIGHT) {
+                if (idx % 2 == 0 && idx + 1 < 6) idx++;
+            } else if (key == KeyInput::UP) {
+                if (idx >= 2) idx -= 2;
+            } else if (key == KeyInput::DOWN) {
+                if (idx + 2 < 6) idx += 2;
+            } else if (key == KeyInput::ENTER) {
+                ctx.customDNA.tension = static_cast<TensionType>(idx);
+                applyCustomScenario(ctx); // 渲染自定义 Scenario
                 ctx.state = AppState::BUILDER_PREVIEW;
                 return;
             } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::BUILDER_INTENSITY;
+                ctx.state = AppState::BUILDER_CONDITION;
                 ctx.selectedMenuIndex = 0;
                 return;
             }
@@ -343,17 +320,14 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 Decision choices[] = { Decision::YES, Decision::NO, Decision::MAYBE };
                 ctx.userChoice = choices[ctx.selectedMenuIndex];
 
-                // 瞬间在后台计算 16 种 MBTI 分支推演
                 simulateAll(ctx.currentScenario, ctx.results);
                 ctx.summary = summarizeResults(ctx.results);
 
-                // 计算用户的决策轮廓、最相似 MBTI 以及分歧最大 MBTI
                 ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
                 ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
                 findBiggestDifferenceMBTI(ctx, ctx.biggestDiffMBTI, ctx.biggestDiffDecision);
                 ctx.matchType = determineMatchType(ctx);
 
-                // 启动用户 Profile 雷达图的过渡呈现
                 RadarData target = {
                     ctx.userProfile.risk,
                     ctx.userProfile.novelty,
@@ -364,7 +338,6 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 };
                 startRadarAnimation(ctx, target, now);
 
-                // 直接进入 Reveal 揭晓屏
                 ctx.state = AppState::YOUR_MATCH;
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::BUILDER_PREVIEW;

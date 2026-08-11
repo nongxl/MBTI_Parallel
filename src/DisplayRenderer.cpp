@@ -1,5 +1,6 @@
 #include "DisplayRenderer.h"
 #include "RadarChart.h"
+#include "ScenarioBuilder.h"
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -114,92 +115,53 @@ void renderUI(const UIContext& ctx) {
             break;
         }
 
-        case AppState::BUILDER_TYPE:
-        case AppState::BUILDER_MOTIVATION:
-        case AppState::BUILDER_CONCERN:
-        case AppState::BUILDER_INTENSITY:
-        case AppState::BUILDER_PRIORITY: {
-            const char* title = isCN ? "步骤" : "STEP";
-            if (ctx.state == AppState::BUILDER_TYPE) title = isCN ? "1. 决策动作" : "1. DECISION TYPE";
-            else if (ctx.state == AppState::BUILDER_MOTIVATION) title = isCN ? "2. 驱动动机" : "2. MOTIVATION";
-            else if (ctx.state == AppState::BUILDER_CONCERN) title = isCN ? "3. 核心顾虑" : "3. MAIN CONCERN";
-            else if (ctx.state == AppState::BUILDER_INTENSITY) title = isCN ? "4. 强度级别" : "4. INTENSITY";
-            else if (ctx.state == AppState::BUILDER_PRIORITY) title = isCN ? "5. 优先偏好" : "5. PRIORITY";
+        case AppState::BUILDER_WHO:
+        case AppState::BUILDER_SITUATION:
+        case AppState::BUILDER_CONDITION:
+        case AppState::BUILDER_TENSION: {
+            const char* title = isCN ? "构造场景" : "CREATE SCENARIO";
+            if (ctx.state == AppState::BUILDER_WHO) title = isCN ? "1. 谁？ (WHO)" : "1. WHO?";
+            else if (ctx.state == AppState::BUILDER_SITUATION) title = isCN ? "2. 什么情境？ (SITUATION)" : "2. SITUATION?";
+            else if (ctx.state == AppState::BUILDER_CONDITION) title = isCN ? "3. 特殊条件？ (CONDITION)" : "3. CONDITION?";
+            else if (ctx.state == AppState::BUILDER_TENSION) title = isCN ? "4. 纠结什么？ (TENSION)" : "4. WHAT'S AT STAKE?";
 
             drawHeader(title, isCN);
 
-            // 2D 网格排列
-            int count = 0;
-            const char* items[8];
-            const char* itemsCN[8];
+            int count = 6;
+            const char* items[6];
             const char* icons[] = { "◇", "○", "△", "□", "☆", "⬡" };
 
-            if (ctx.state == AppState::BUILDER_TYPE) {
-                count = 6;
-                items[0]="GET"; items[1]="GO"; items[2]="DO"; items[3]="SAY"; items[4]="CHOOSE"; items[5]="CHANGE";
-                itemsCN[0]="获得"; itemsCN[1]="前往"; itemsCN[2]="执行"; itemsCN[3]="表达"; itemsCN[4]="选择"; itemsCN[5]="改变";
-            } else if (ctx.state == AppState::BUILDER_MOTIVATION) {
-                count = 5;
-                items[0]="WANT"; items[1]="NEED"; items[2]="CURIOUS"; items[3]="FUN"; items[4]="OPPORTUNITY";
-                itemsCN[0]="渴望"; itemsCN[1]="刚需"; itemsCN[2]="好奇"; itemsCN[3]="乐趣"; itemsCN[4]="机遇";
-            } else if (ctx.state == AppState::BUILDER_CONCERN) {
-                count = 6;
-                items[0]="RISK"; items[1]="COST"; items[2]="TIME"; items[3]="EFFORT"; items[4]="UNKNOWN"; items[5]="NONE";
-                itemsCN[0]="风险"; itemsCN[1]="花费"; itemsCN[2]="耗时"; itemsCN[3]="精力"; itemsCN[4]="未知"; itemsCN[5]="无";
-            } else if (ctx.state == AppState::BUILDER_INTENSITY) {
-                count = 3;
-                items[0]="LOW"; items[1]="MEDIUM"; items[2]="HIGH";
-                itemsCN[0]="轻度"; itemsCN[1]="中度"; itemsCN[2]="重度";
-            } else if (ctx.state == AppState::BUILDER_PRIORITY) {
-                count = 4;
-                items[0]="EXPERIENCE"; items[1]="PRACTICAL"; items[2]="PEOPLE"; items[3]="SAFETY";
-                itemsCN[0]="体验"; itemsCN[1]="实用"; itemsCN[2]="人际"; itemsCN[3]="安全";
+            if (ctx.state == AppState::BUILDER_WHO) {
+                for (int i = 0; i < 6; ++i) items[i] = getWhoName(static_cast<WhoType>(i), isCN);
+            } else if (ctx.state == AppState::BUILDER_SITUATION) {
+                for (int i = 0; i < 6; ++i) items[i] = getSituationName(static_cast<SituationType>(i), isCN);
+            } else if (ctx.state == AppState::BUILDER_CONDITION) {
+                for (int i = 0; i < 6; ++i) items[i] = getConditionName(static_cast<ConditionType>(i), isCN);
+            } else if (ctx.state == AppState::BUILDER_TENSION) {
+                for (int i = 0; i < 6; ++i) items[i] = getTensionName(static_cast<TensionType>(i), isCN);
             }
 
-            if (ctx.state == AppState::BUILDER_INTENSITY) {
-                for (int i = 0; i < count; ++i) {
-                    if (isCN) {
-                        canvas.setFont(&fonts::efontCN_12);
-                        canvas.setTextSize(1);
-                        canvas.setCursor(6 + i * 76, 50);
-                    } else {
-                        canvas.setFont(&fonts::Font0);
-                        canvas.setTextSize(2);
-                        canvas.setCursor(6 + i * 76, 50);
-                    }
-                    const char* txt = isCN ? itemsCN[i] : items[i];
-                    if (i == ctx.selectedMenuIndex) {
-                        canvas.setTextColor(CYAN, BLACK);
-                        canvas.printf(">%s", txt);
-                    } else {
-                        canvas.setTextColor(WHITE, BLACK);
-                        canvas.printf(" %s", txt);
-                    }
+            for (int i = 0; i < count; ++i) {
+                int col = i % 2;
+                int row = i / 2;
+                int x = (col == 0) ? 6 : 122;
+                int y = 30 + row * 28;
+
+                if (isCN) {
+                    canvas.setFont(&fonts::efontCN_12);
+                    canvas.setTextSize(1);
+                } else {
+                    canvas.setFont(&fonts::Font0);
+                    canvas.setTextSize(1);
                 }
-            } else {
-                for (int i = 0; i < count; ++i) {
-                    int col = i % 2;
-                    int row = i / 2;
-                    int x = (col == 0) ? 6 : 124;
-                    int y = 30 + row * 28;
 
-                    if (isCN) {
-                        canvas.setFont(&fonts::efontCN_12);
-                        canvas.setTextSize(1);
-                    } else {
-                        canvas.setFont(&fonts::Font0);
-                        canvas.setTextSize(2);
-                    }
-
-                    canvas.setCursor(x, y);
-                    const char* txt = isCN ? itemsCN[i] : items[i];
-                    if (i == ctx.selectedMenuIndex) {
-                        canvas.setTextColor(CYAN, BLACK);
-                        canvas.printf("> %s %s", icons[i % 6], txt);
-                    } else {
-                        canvas.setTextColor(WHITE, BLACK);
-                        canvas.printf("  %s %s", icons[i % 6], txt);
-                    }
+                canvas.setCursor(x, y);
+                if (i == ctx.selectedMenuIndex) {
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.printf("> %s %s", icons[i % 6], items[i]);
+                } else {
+                    canvas.setTextColor(WHITE, BLACK);
+                    canvas.printf("  %s %s", icons[i % 6], items[i]);
                 }
             }
 
@@ -210,7 +172,7 @@ void renderUI(const UIContext& ctx) {
         case AppState::BUILDER_PREVIEW: {
             // 【Phase 4 UX 重构原则：Decide First, Discover Later】
             // 绝不展示任何 MBTI 预判、分歧或预测。纯粹让用户凭直觉看题并做决定！
-            drawHeader(isCN ? "决策场景" : "SCENARIO", isCN);
+            drawHeader(isCN ? "决策场景" : "SCENARIO PREVIEW", isCN);
             
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
@@ -249,7 +211,7 @@ void renderUI(const UIContext& ctx) {
             };
             drawRadarChart(canvas, 182, 65, 30, prevData, CYAN, DARKCYAN, false, isCN);
 
-            drawFooter(isCN ? "[ENTER] 做出选择  [ESC] 首页" : "[ENTER] MAKE DECISION  [ESC] HOME", isCN);
+            drawFooter(isCN ? "[ENTER] 做出选择  [ESC] 修改重选" : "[ENTER] MAKE DECISION  [ESC] EDIT", isCN);
             break;
         }
 
