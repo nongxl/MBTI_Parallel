@@ -49,7 +49,8 @@ enum class Language {
 
 struct UIContext {
     AppState state;
-    Language lang; // 当前语言设置 (ENGLISH / CHINESE)
+    Language lang;      // 当前语言设置 (ENGLISH / CHINESE)
+    int bootMenuMode;   // 开机选框模式: 0 (随机模式 RANDOM), 1 (自定义模式 CREATE)
 
     // 自定义决策场景 4 步 DNA
     CustomScenarioDNA customDNA;

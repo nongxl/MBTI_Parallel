@@ -113,6 +113,7 @@ static void applyCustomScenario(UIContext& ctx) {
 void initApp(UIContext& ctx) {
     ctx.state = AppState::HOME;
     ctx.lang = Language::CHINESE; // 默认语言设为中文
+    ctx.bootMenuMode = 0;         // 默认选中 0: 随机场景模式
     ctx.selectedMenuIndex = 0;
     ctx.exploreIndex = 0;
     ctx.userChoice = Decision::YES;
@@ -193,15 +194,19 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 ctx.lang = Language::CHINESE;
             } else if (key == KeyInput::RIGHT) {
                 ctx.lang = Language::ENGLISH;
-            } else if (key == KeyInput::UP) { // 选 1: 随机场景模式
-                triggerRandomScenario(ctx);
-                ctx.state = AppState::BUILDER_PREVIEW;
-            } else if (key == KeyInput::DOWN) { // 选 2: 自定义场景构造模式 (4 步选词)
-                ctx.state = AppState::BUILDER_WHO;
-                ctx.selectedMenuIndex = 0;
+            } else if (key == KeyInput::UP || key == KeyInput::DOWN) {
+                // 上下键在【1. 随机场景模式】与【2. 自定义构造模式】之间切换
+                ctx.bootMenuMode = 1 - ctx.bootMenuMode;
             } else if (key == KeyInput::ENTER) {
-                triggerRandomScenario(ctx);
-                ctx.state = AppState::BUILDER_PREVIEW;
+                if (ctx.bootMenuMode == 0) {
+                    // 1. 随机模式 -> 触发程序化随机生成
+                    triggerRandomScenario(ctx);
+                    ctx.state = AppState::BUILDER_PREVIEW;
+                } else {
+                    // 2. 自定义模式 -> 进入 WHO (Step 1) 构造流
+                    ctx.state = AppState::BUILDER_WHO;
+                    ctx.selectedMenuIndex = 0;
+                }
             }
             break;
 
@@ -289,7 +294,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 if (idx + 2 < 6) idx += 2;
             } else if (key == KeyInput::ENTER) {
                 ctx.customDNA.tension = static_cast<TensionType>(idx);
-                applyCustomScenario(ctx); // 渲染自定义 Scenario
+                applyCustomScenario(ctx);
                 ctx.state = AppState::BUILDER_PREVIEW;
                 return;
             } else if (key == KeyInput::BACK) {
@@ -306,7 +311,11 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 ctx.state = AppState::YOUR_CHOICE;
                 ctx.selectedMenuIndex = 0;
             } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::HOME;
+                if (ctx.bootMenuMode == 1) {
+                    ctx.state = AppState::BUILDER_TENSION;
+                } else {
+                    ctx.state = AppState::HOME;
+                }
                 ctx.selectedMenuIndex = 0;
             }
             break;
@@ -370,8 +379,12 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 startRadarAnimation(ctx, target, now);
             } else if (key == KeyInput::ENTER) {
                 ctx.totalPlays++;
-                triggerRandomScenario(ctx);
-                ctx.state = AppState::BUILDER_PREVIEW;
+                if (ctx.bootMenuMode == 1) {
+                    ctx.state = AppState::BUILDER_WHO;
+                } else {
+                    triggerRandomScenario(ctx);
+                    ctx.state = AppState::BUILDER_PREVIEW;
+                }
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::YOUR_MATCH;
             }

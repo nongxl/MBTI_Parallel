@@ -83,28 +83,60 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 绘制大幅放大的科技感主六边形图 (centerX = 120, centerY = 46, radius = 48)
-            drawRadarChart(canvas, 120, 46, 48, homeData, GREEN, DARKCYAN, false, isCN);
+            // 绘制背景科技感主六边形图 (centerX = 120, centerY = 40, radius = 38)
+            drawRadarChart(canvas, 120, 40, 38, homeData, GREEN, DARKCYAN, false, isCN);
 
             // 标题文字 PARALLEL
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(2);
-            canvas.setCursor(72, 96);
+            canvas.setCursor(72, 5);
             canvas.print("PARALLEL");
 
-            // 开机界面语言选择控件: 中文在前并默认选中！
-            canvas.setFont(&fonts::efontCN_12);
-            canvas.setTextSize(1);
+            // 开机双模式切选菜单 (1. 🎲 随机模式 / 2. 🛠️ 自定义模式)
             if (isCN) {
-                canvas.setTextColor(CYAN, BLACK);
-                canvas.setCursor(35, 118);
-                canvas.print("> [中文] <   [ENGLISH]");
+                canvas.setFont(&fonts::efontCN_12);
+                canvas.setTextSize(1);
+
+                if (ctx.bootMenuMode == 0) {
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.setCursor(32, 83);
+                    canvas.print("> 1. 🎲 随机场景模式");
+                    canvas.setTextColor(LIGHTGREY, BLACK);
+                    canvas.setCursor(32, 99);
+                    canvas.print("  2. 🛠️ 自定义场景构造");
+                } else {
+                    canvas.setTextColor(LIGHTGREY, BLACK);
+                    canvas.setCursor(32, 83);
+                    canvas.print("  1. 🎲 随机场景模式");
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.setCursor(32, 99);
+                    canvas.print("> 2. 🛠️ 自定义场景构造");
+                }
             } else {
-                canvas.setTextColor(CYAN, BLACK);
-                canvas.setCursor(35, 118);
-                canvas.print("  [中文]   > [ENGLISH] <");
+                canvas.setFont(&fonts::Font0);
+                canvas.setTextSize(1);
+
+                if (ctx.bootMenuMode == 0) {
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.setCursor(32, 83);
+                    canvas.print("> 1. RANDOM SCENARIO");
+                    canvas.setTextColor(LIGHTGREY, BLACK);
+                    canvas.setCursor(32, 99);
+                    canvas.print("  2. CREATE SCENARIO");
+                } else {
+                    canvas.setTextColor(LIGHTGREY, BLACK);
+                    canvas.setCursor(32, 83);
+                    canvas.print("  1. RANDOM SCENARIO");
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.setCursor(32, 99);
+                    canvas.print("> 2. CREATE SCENARIO");
+                }
             }
+
+            // 底栏绘制语言与操作引导提示
+            const char* homeFooter = isCN ? "[左右] 语言  [上下] 模式  [ENTER] 开始" : "[L/R] Lang  [UP/DN] Mode  [ENTER] Start";
+            drawFooter(homeFooter, isCN);
 
             if (ctx.totalPlays > 0) {
                 canvas.setFont(&fonts::Font0);
@@ -170,48 +202,38 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::BUILDER_PREVIEW: {
-            // 【Phase 4 UX 重构原则：Decide First, Discover Later】
-            // 绝不展示任何 MBTI 预判、分歧或预测。纯粹让用户凭直觉看题并做决定！
-            drawHeader(isCN ? "决策场景" : "SCENARIO PREVIEW", isCN);
+            // 【Phase 4 规范：Decide First, Discover Later】
+            // 纯粹、全屏宽大字展现场景题目与描述！彻底移除混淆的右侧雷达图！
+            drawHeader(isCN ? "场景预览" : "SCENARIO PREVIEW", isCN);
             
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
             canvas.setTextSize(1);
             canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(6, 28);
+            canvas.setCursor(8, 28);
             const char* titleTxt = isCN ? (ctx.currentScenarioTitleCN[0] ? ctx.currentScenarioTitleCN : "离线情境")
                                         : (ctx.currentScenarioTitle[0] ? ctx.currentScenarioTitle : "SCENARIO");
             canvas.print(titleTxt);
 
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(6, 44);
-            // 自动折行打印场景描述
+            canvas.setCursor(8, 46);
+            
+            // 占用全屏宽 (X = 8 ~ 232) 自动折行打印场景描述
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
-            int lineY = 44;
-            while (*desc && lineY <= 96) {
-                char buf[24] = {0};
-                int takeBytes = isCN ? 18 : 18;
+            int lineY = 46;
+            while (*desc && lineY <= 102) {
+                char buf[36] = {0};
+                int takeBytes = isCN ? 32 : 32;
                 strncpy(buf, desc, takeBytes);
-                canvas.setCursor(6, lineY);
+                canvas.setCursor(8, lineY);
                 canvas.print(buf);
                 desc += strlen(buf);
-                lineY += 14;
+                lineY += 15;
             }
 
-            // 右侧抽象预览雷达图
-            RadarData prevData = {
-                ctx.currentScenario.risk,
-                ctx.currentScenario.novelty,
-                ctx.currentScenario.practicalValue,
-                ctx.currentScenario.social,
-                100.0f - ctx.currentScenario.uncertainty,
-                ctx.currentScenario.practicalValue
-            };
-            drawRadarChart(canvas, 182, 65, 30, prevData, CYAN, DARKCYAN, false, isCN);
-
-            drawFooter(isCN ? "[ENTER] 做出选择  [ESC] 修改重选" : "[ENTER] MAKE DECISION  [ESC] EDIT", isCN);
+            drawFooter(isCN ? "[ENTER] 做出选择  [ESC] 修改/返回" : "[ENTER] MAKE DECISION  [ESC] EDIT", isCN);
             break;
         }
 
