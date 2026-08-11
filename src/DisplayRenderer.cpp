@@ -14,7 +14,7 @@ static M5Canvas canvas(&M5Cardputer.Display);
 static uint32_t millis() { return 0; }
 #endif
 
-// 安全 UTF-8 整字对齐断行函数 (杜绝截断 UTF-8 汉字造成的半字节黑块/乱码方块)
+// 安全 UTF-8 整字对齐断行函数
 static int getSafeUTF8Break(const char* str, int maxBytes) {
     int len = (int)strlen(str);
     if (len <= maxBytes) return len;
@@ -129,17 +129,18 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 图层 1: 【前景发光雷达图】(半径锁定 38px, 中心点 120, 46，顶部 Y = 8px 100% 留白不越界)
-            drawRadarChart(canvas, 120, 46, 38, homeData, GREEN, DARKCYAN, false, isCN);
-
-            // 图层 2: 【背景大标题 PARALLEL】(使用亮丽黄色 YELLOW，叠加渲染绝不被掩盖)
+            // 【图层 0 (最底层 Layer 0)】: 先在黑屏画布最底部绘制亮黄色 YELLOW PARALLEL 大字
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(3);
             canvas.setCursor(48, 30);
             canvas.print("PARALLEL");
 
-            // 图层 3: 【开机精简 3 选项横向排列】(精细 3 等分 X 坐标，完全锁定在屏幕 0 ~ 230px 内)
+            // 【图层 1 (中间与上层 Layer 1 & 2)】: 在黄色 PARALLEL 大字上方叠加半透网点发光雷达图
+            // Dither 半透算法保证背后的黄色大字透过雷达数据区域清晰可见！
+            drawRadarChart(canvas, 120, 46, 38, homeData, GREEN, DARKCYAN, false, isCN);
+
+            // 【图层 3】: 开机精简 3 选项横向排列
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
@@ -210,7 +211,7 @@ void renderUI(const UIContext& ctx) {
                 }
             }
 
-            // 图层 4: 底栏 Footer 引导
+            // 【图层 4】: 底栏 Footer 引导
             const char* homeFooter = isCN ? "[左右] 移动选项  [ENTER] 开始" : "[L/R] Move  [ENTER] Start";
             drawFooter(homeFooter, isCN);
 
@@ -506,7 +507,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextColor(CYAN, BLACK);
             canvas.print(isCN ? "依据:" : "Reason:");
 
-            // 【彻底杜绝黑块/乱码方块】使用 getSafeUTF8Break 按 3 字节整汉字边界切分！
             const char* pReason = isCN ? getDecisionReasonCN(res.reason) : res.reason;
             int lineY = 79;
             while (*pReason && lineY <= 105) {

@@ -7,6 +7,39 @@
 #define M_PI 3.14159265358979323846f
 #endif
 
+// 极客网点半透明三角形填充算法 (Dither Translucent Triangle Fill)
+// 仅在 (x + y) % 2 == 0 隔点绘制像素，完全保留 50% 底层背景文字与图形透射！
+static void drawDitherTriangle(M5Canvas& canvas, int x0, int y0, int x1, int y1, int x2, int y2, uint16_t color) {
+    int minX = std::min({x0, x1, x2});
+    int maxX = std::max({x0, x1, x2});
+    int minY = std::min({y0, y1, y2});
+    int maxY = std::max({y0, y1, y2});
+
+    // 边界裁剪
+    minX = std::max(0, minX);
+    maxX = std::min(239, maxX);
+    minY = std::max(0, minY);
+    maxY = std::min(134, maxY);
+
+    // 重心坐标法在包围盒内进行半透网点像素绘制
+    float denominator = static_cast<float>((y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2));
+    if (fabsf(denominator) < 0.0001f) return;
+
+    for (int y = minY; y <= maxY; ++y) {
+        for (int x = minX; x <= maxX; ++x) {
+            if ((x + y) % 2 == 0) { // 50% 网点半透打孔
+                float w0 = ((y1 - y2) * (x - x2) + (x2 - x1) * (y - y2)) / denominator;
+                float w1 = ((y2 - y0) * (x - x2) + (x0 - x2) * (y - y2)) / denominator;
+                float w2 = 1.0f - w0 - w1;
+
+                if (w0 >= 0.0f && w1 >= 0.0f && w2 >= 0.0f) {
+                    canvas.drawPixel(x, y, color);
+                }
+            }
+        }
+    }
+}
+
 void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, const RadarData& data, uint16_t lineColor, uint16_t fillColor, bool drawLabels, bool isCN) {
     float values[6] = {
         data.novelty,
@@ -30,14 +63,14 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
         vy[i] = centerY + static_cast<int>(r * sinf(angle));
     }
 
-    // 2. 【图层 1: 极淡低调透光蓝色充能内衬】(RGB565: 0x00A5 极淡微光深青蓝，绝不遮盖任何背景文字与线段)
-    uint16_t cyanFillColor = 0x00A5;
+    // 2. 【图层 1: 网点半透明充能内衬】(50% 隔点打孔透射最底层的 PARALLEL 大字)
+    uint16_t cyanDitherColor = CYAN; // 亮青蓝色发光半透网点
     for (int i = 0; i < 6; ++i) {
         int next = (i + 1) % 6;
-        canvas.fillTriangle(centerX, centerY, vx[i], vy[i], vx[next], vy[next], cyanFillColor);
+        drawDitherTriangle(canvas, centerX, centerY, vx[i], vy[i], vx[next], vy[next], cyanDitherColor);
     }
 
-    // 3. 【图层 2: 坐标系同心网格线与放射轴】(完全悬浮在极淡蓝色填充块上方)
+    // 3. 【图层 2: 坐标系同心网格线与放射轴】
     for (int layer = 1; layer <= 3; ++layer) {
         float r = radius * (layer / 3.0f);
         int px[6], py[6];
