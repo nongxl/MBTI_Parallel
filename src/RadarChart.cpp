@@ -43,7 +43,7 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
         canvas.drawLine(centerX, centerY, outerX[i], outerY[i], DARKGREY);
     }
 
-    // 3. 计算数据多边形顶点并填充透明图层
+    // 3. 计算数据多边形顶点
     int vx[6], vy[6];
     for (int i = 0; i < 6; ++i) {
         float val = std::min(100.0f, std::max(0.0f, values[i]));
@@ -53,19 +53,29 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
         vy[i] = centerY + static_cast<int>(r * sinf(angle));
     }
 
-    // 绘制多边形边框与双层发光光晕
+    // 4. 【半透明淡蓝色填充 (Semi-transparent Cyber Blue Fill)】
+    // 将多边形剖分为 6 个以中心点为原点的扇形三角形，随形变动态变化
+    uint16_t cyanFillColor = 0x0219; // 深暗青蓝色内衬色 (16-bit RGB565)
+    for (int i = 0; i < 6; ++i) {
+        int next = (i + 1) % 6;
+        canvas.fillTriangle(centerX, centerY, vx[i], vy[i], vx[next], vy[next], cyanFillColor);
+    }
+
+    // 5. 【加粗防断线多边形轮廓线 (Thick Anti-Break Outline)】
+    // 使用三重邻域偏移加固，杜绝斜线断裂或变细
     for (int i = 0; i < 6; ++i) {
         int next = (i + 1) % 6;
         canvas.drawLine(vx[i], vy[i], vx[next], vy[next], lineColor);
-        canvas.drawLine(vx[i]+1, vy[i]+1, vx[next]+1, vy[next]+1, fillColor);
+        canvas.drawLine(vx[i] + 1, vy[i], vx[next] + 1, vy[next], lineColor);
+        canvas.drawLine(vx[i], vy[i] + 1, vx[next], vy[next] + 1, lineColor);
     }
 
-    // 绘制加固点
+    // 6. 绘制白色加固顶点
     for (int i = 0; i < 6; ++i) {
         canvas.fillCircle(vx[i], vy[i], 2, WHITE);
     }
 
-    // 4. 绘制顶点标签 (拉开 RISK/PLANNING 与 SOCIAL/LOGIC 的 Y 轴间距)
+    // 7. 绘制顶点标签 (拉开间距与防边界碰撞)
     if (drawLabels) {
         if (isCN) {
             canvas.setFont(&fonts::efontCN_12);
@@ -85,26 +95,24 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
             const char* txt = isCN ? labelsCN[i] : labelsEN[i];
             int textLen = isCN ? (strlen(txt) / 3 * 12) : (strlen(txt) * 6);
 
-            // 针对 6 个方向进行专属间距与边界保护调整
-            if (i == 0) { // NOVELTY (正上)
+            if (i == 0) { // NOVELTY
                 labelX -= textLen / 2;
                 labelY -= 10;
-            } else if (i == 1) { // RISK (右上 - 向上挪 6px 拉开距离)
+            } else if (i == 1) { // RISK (右上拉开)
                 labelY -= 6;
-            } else if (i == 2) { // PLANNING (右下 - 向下挪 6px 拉开距离)
+            } else if (i == 2) { // PLANNING (右下拉开)
                 labelY += 6;
-            } else if (i == 3) { // PRACTICALITY (正下)
+            } else if (i == 3) { // PRACTICALITY
                 labelX -= textLen / 2;
                 labelY += 2;
-            } else if (i == 4) { // LOGIC (左下 - 向下挪 6px 拉开距离)
+            } else if (i == 4) { // LOGIC (左下拉开)
                 labelX -= textLen;
                 labelY += 6;
-            } else if (i == 5) { // SOCIAL (左上 - 向上挪 6px 拉开距离)
+            } else if (i == 5) { // SOCIAL (左上拉开)
                 labelX -= textLen;
                 labelY -= 6;
             }
 
-            // 限制坐标不能脱离画布 0 ~ 235 范围，防止 M5GFX 自动换行
             if (labelX + textLen > 235) {
                 labelX = 235 - textLen;
             }

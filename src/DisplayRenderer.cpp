@@ -109,14 +109,14 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 图层 1: 【背景大标题 PARALLEL】
+            // 图层 1: 【背景大标题 PARALLEL】(恢复为之前的亮丽黄色 YELLOW 字体)
             canvas.setFont(&fonts::Font0);
-            canvas.setTextColor(DARKGREY, BLACK);
+            canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(3);
             canvas.setCursor(48, 25);
             canvas.print("PARALLEL");
 
-            // 图层 2: 【前景六边形发光雷达图】
+            // 图层 2: 【前景六边形发光雷达图】(带半透明淡蓝色充能内衬，透射黄色背景大字)
             drawRadarChart(canvas, 120, 38, 42, homeData, GREEN, DARKCYAN, false, isCN);
 
             // 图层 3: 开机三大模式切选菜单 (1. 🎲 随机模式 / 2. 🛠️ 自定义模式 / 3. 👤 真实人格画像)
@@ -182,13 +182,10 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::MY_PROFILE: {
-            // 【规范要求：左侧显示文字统计，右侧显示六边形雷达图】
             drawHeader(isCN ? "真实长效 MBTI 画板" : "MY LONG-TERM PROFILE", isCN);
 
-            // 右侧绘制 NVS 累积极坐标发光雷达图 (centerX = 180, centerY = 68, radius = 35)
             drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
-            // 左侧信息区域 (X = 6 ~ 124)
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
@@ -370,17 +367,13 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::YOUR_MATCH: {
-            // 【规范强化：统一左侧文本信息，右侧绘制六边形雷达图】
             drawHeader(isCN ? "你的决策轮廓" : "YOUR DECISION PROFILE", isCN);
             
-            // 右侧区域 (centerX = 180, centerY = 68, radius = 35) 绘制雷达图
             drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
 
-            // 左侧区域 (X = 6 ~ 124) 展示文本信息
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
-            // 1. 最吻合 MBTI (MOST LIKE)
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(6, 28);
@@ -392,7 +385,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 42);
             canvas.printf("%s (%.1f%%)", getMBTIName(ctx.closestMBTI), ctx.matchSimilarity);
 
-            // 2. 最大分歧 MBTI (BIGGEST DIFFERENCE)
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
@@ -408,7 +400,6 @@ void renderUI(const UIContext& ctx) {
             const char* diffDecTxt = isCN ? getDecisionNameCN(ctx.biggestDiffDecision) : getDecisionName(ctx.biggestDiffDecision);
             canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
 
-            // 3. 用户选择 (YOUR CHOICE)
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
