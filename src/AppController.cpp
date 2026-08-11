@@ -22,18 +22,23 @@ void initApp(UIContext& ctx) {
 
 void updateApp(UIContext& ctx, uint32_t currentMillis) {
     if (ctx.state == AppState::SIMULATING) {
+        if (ctx.animStartTime == 0) {
+            ctx.animStartTime = currentMillis;
+        }
+
         uint32_t elapsed = currentMillis - ctx.animStartTime;
-        ctx.animProgress = (elapsed * 100) / 1000; // 1000ms 持续时间
+        ctx.animProgress = (elapsed * 100) / 1000; // 1000ms 持续时间动画
 
         if (ctx.animProgress >= 100) {
             ctx.animProgress = 100;
-            // 引擎计算
+            // 引擎计算 16 人格模拟结果
             simulateAll(ctx.currentScenario, ctx.results);
             ctx.summary = summarizeResults(ctx.results);
             findBiggestSplit(ctx.results, ctx.splitYesType, ctx.splitNoType);
             
             ctx.state = AppState::SUMMARY;
             ctx.selectedMenuIndex = 0;
+            renderUI(ctx); // 自动完成后，立即强制重绘，呈现 SUMMARY 汇总界面
         }
     }
 }
@@ -141,7 +146,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
         case AppState::BUILDER_PREVIEW:
             if (key == KeyInput::ENTER) {
                 ctx.state = AppState::SIMULATING;
-                ctx.animStartTime = 0; // millis 会在 updateApp 获取
+                ctx.animStartTime = 0; // 标记在 updateApp 中自动设为当下的 currentMillis
                 ctx.animProgress = 0;
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::BUILDER_PRIORITY;
@@ -150,7 +155,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
             break;
 
         case AppState::SIMULATING:
-            // 自动流转
+            // 自动流转，不响应该阶段按键输入
             break;
 
         case AppState::SUMMARY:

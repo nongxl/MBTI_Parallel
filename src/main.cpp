@@ -42,7 +42,14 @@ void setup() {
 
 void loop() {
     uint32_t currentMillis = millis();
+    AppState oldState = g_uiContext.state;
+
     updateApp(g_uiContext, currentMillis);
+
+    // 当状态在 updateApp 中自动流转发生变更时，自动触发界面绘制
+    if (oldState != g_uiContext.state) {
+        renderUI(g_uiContext);
+    }
 
     KeyInput key = readCardputerKeyboard();
     if (key != KeyInput::NONE) {
@@ -51,6 +58,7 @@ void loop() {
         delay(150); // 防抖
     }
 
+    // 模拟动画进行中时，不断更新进度条帧
     if (g_uiContext.state == AppState::SIMULATING) {
         renderUI(g_uiContext);
         delay(30);
