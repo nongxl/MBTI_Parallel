@@ -68,10 +68,15 @@ struct UIContext {
     int exploreIndex;
     Decision userChoice;
 
+    // 用户本题决策轮廓与匹配算法
     DecisionProfile userProfile;
     MBTIType closestMBTI;
     float matchSimilarity;
     MatchType matchType;
+
+    // 本题分歧最大的人格与决策结果
+    MBTIType biggestDiffMBTI;
+    Decision biggestDiffDecision;
 
     // 程序化场景生成 DNA 10 次防重复历史
     ScenarioDNA recentDNAs[RECENT_DNA_HISTORY_SIZE];

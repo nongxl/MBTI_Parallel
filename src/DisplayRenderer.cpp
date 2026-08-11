@@ -92,17 +92,17 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(72, 96);
             canvas.print("PARALLEL");
 
-            // 开机界面语言选择控件: 挂载 efontCN_12 支持中文字符清晰打印！
+            // 开机界面语言选择控件: 中文在前并默认选中！
             canvas.setFont(&fonts::efontCN_12);
             canvas.setTextSize(1);
-            if (!isCN) {
+            if (isCN) {
                 canvas.setTextColor(CYAN, BLACK);
                 canvas.setCursor(35, 118);
-                canvas.print("> [ENGLISH] <   [中文]");
+                canvas.print("> [中文] <   [ENGLISH]");
             } else {
                 canvas.setTextColor(CYAN, BLACK);
                 canvas.setCursor(35, 118);
-                canvas.print("  [ENGLISH]   > [中文] <");
+                canvas.print("  [中文]   > [ENGLISH] <");
             }
 
             if (ctx.totalPlays > 0) {
@@ -208,7 +208,9 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::BUILDER_PREVIEW: {
-            drawHeader(isCN ? "场景预览" : "SCENARIO PREVIEW", isCN);
+            // 【Phase 4 UX 重构原则：Decide First, Discover Later】
+            // 绝不展示任何 MBTI 预判、分歧或预测。纯粹让用户凭直觉看题并做决定！
+            drawHeader(isCN ? "决策场景" : "SCENARIO", isCN);
             
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
@@ -226,7 +228,7 @@ void renderUI(const UIContext& ctx) {
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             int lineY = 44;
-            while (*desc && lineY <= 90) {
+            while (*desc && lineY <= 96) {
                 char buf[24] = {0};
                 int takeBytes = isCN ? 18 : 18;
                 strncpy(buf, desc, takeBytes);
@@ -245,101 +247,96 @@ void renderUI(const UIContext& ctx) {
                 100.0f - ctx.currentScenario.uncertainty,
                 ctx.currentScenario.practicalValue
             };
-            drawRadarChart(canvas, 182, 65, 32, prevData, CYAN, DARKCYAN, false, isCN);
+            drawRadarChart(canvas, 182, 65, 30, prevData, CYAN, DARKCYAN, false, isCN);
 
-            drawFooter(isCN ? "[ENTER] 开始模拟  [ESC] 首页" : "[ENTER] SIMULATE  [ESC] HOME", isCN);
+            drawFooter(isCN ? "[ENTER] 做出选择  [ESC] 首页" : "[ENTER] MAKE DECISION  [ESC] HOME", isCN);
             break;
         }
 
-        case AppState::SIMULATING: {
-            drawHeader(isCN ? "正在模拟推演..." : "SIMULATING...", isCN);
-            
-            if (isCN) {
-                canvas.setFont(&fonts::efontCN_12);
-                canvas.setTextSize(1);
-                canvas.setTextColor(GREEN, BLACK);
-                canvas.setCursor(20, 36);
-                canvas.print("16 人格分支并行计算");
-            } else {
-                canvas.setFont(&fonts::Font0);
-                canvas.setTextSize(2);
-                canvas.setTextColor(GREEN, BLACK);
-                canvas.setCursor(20, 36);
-                canvas.print("16 BRANCHES");
+        case AppState::YOUR_CHOICE: {
+            drawHeader(isCN ? "如果是你，你怎么选？" : "WHAT WOULD YOU DO?", isCN);
+            const char* choices[] = { "YES", "NO", "MAYBE" };
+            const char* choicesCN[] = { "同意 (YES)", "拒绝 (NO)", "犹豫 (MAYBE)" };
+            for (int i = 0; i < 3; ++i) {
+                if (isCN) {
+                    canvas.setFont(&fonts::efontCN_12);
+                    canvas.setTextSize(1);
+                } else {
+                    canvas.setFont(&fonts::Font0);
+                    canvas.setTextSize(2);
+                }
+
+                canvas.setCursor(10, 38 + i * 26);
+                const char* txt = isCN ? choicesCN[i] : choices[i];
+                if (i == ctx.selectedMenuIndex) {
+                    canvas.setTextColor(GREEN, BLACK);
+                    canvas.printf("> %s", txt);
+                } else {
+                    canvas.setTextColor(WHITE, BLACK);
+                    canvas.printf("  %s", txt);
+                }
             }
+            drawFooter(isCN ? "[上下] 移动  [ENTER] 确认选择" : "[UP/DN] Move  [ENTER] Confirm", isCN);
+            break;
+        }
 
-            // 绘制进度条
-            int barWidth = (int)(ctx.animProgress * 1.9f);
-            canvas.drawRect(20, 72, 200, 16, GREEN);
-            canvas.fillRect(22, 74, barWidth > 196 ? 196 : barWidth, 12, CYAN);
+        case AppState::YOUR_MATCH: {
+            // 【Phase 4 Reveal 揭晓屏】：同时优雅呈现【本题决策雷达图】+【最吻合人格】+【最大分歧人格】
+            drawHeader(isCN ? "你的决策轮廓" : "YOUR DECISION PROFILE", isCN);
+            
+            // 左侧绘制用户本题决策轮廓雷达图 (centerX = 62, centerY = 68, radius = 35)
+            drawRadarChart(canvas, 62, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
 
+            if (isCN) canvas.setFont(&fonts::efontCN_12);
+            else canvas.setFont(&fonts::Font0);
+
+            // 右侧区域 (X = 124 ~ 238) 精密双栏布局
+            // 1. 最吻合 MBTI (MOST LIKE)
             canvas.setTextSize(1);
-            canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(65, 96);
-            canvas.printf(isCN ? "分析进度 %d%%..." : "ANALYZING %d%%...", ctx.animProgress);
-            break;
-        }
-
-        case AppState::SUMMARY: {
-            drawHeader(isCN ? "模拟分支汇总" : "SIMULATION RESULT", isCN);
-            
-            if (isCN) {
-                canvas.setFont(&fonts::efontCN_12);
-                canvas.setTextSize(1);
-            } else {
-                canvas.setFont(&fonts::Font0);
-                canvas.setTextSize(2);
-            }
-            
-            canvas.setTextColor(GREEN, BLACK);
-            canvas.setCursor(10, 35);
-            canvas.printf(isCN ? "同意  : %2d" : "YES   : %2d", ctx.summary.yesCount);
-
-            canvas.setTextColor(RED, BLACK);
-            canvas.setCursor(10, 60);
-            canvas.printf(isCN ? "拒绝  : %2d" : "NO    : %2d", ctx.summary.noCount);
-
-            canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(10, 85);
-            canvas.printf(isCN ? "犹豫  : %2d" : "MAYBE : %2d", ctx.summary.maybeCount);
-
-            // 右侧示意柱状占比图
-            canvas.fillRect(145, 38, ctx.summary.yesCount * 6, 12, GREEN);
-            canvas.fillRect(145, 63, ctx.summary.noCount * 6, 12, RED);
-            canvas.fillRect(145, 88, ctx.summary.maybeCount * 6, 12, YELLOW);
-
-            drawFooter(isCN ? "[ENTER] 查看最大分歧 >" : "[ENTER] BIGGEST SPLIT >", isCN);
-            break;
-        }
-
-        case AppState::BIGGEST_SPLIT: {
-            drawHeader(isCN ? "最大性格分歧" : "BIGGEST SPLIT", isCN);
-            
-            const PersonalityProfile& yesProf = getMBTIProfile(ctx.splitYesType);
-            RadarData yesData = { yesProf.risk, yesProf.novelty, yesProf.logic, yesProf.social, yesProf.planning, yesProf.practicality };
-            drawRadarChart(canvas, 55, 62, 28, yesData, GREEN, DARKCYAN, false, isCN);
+            canvas.setTextColor(WHITE, BLACK);
+            canvas.setCursor(124, 28);
+            canvas.print(isCN ? "最像人格:" : "MOST LIKE:");
 
             canvas.setFont(&fonts::Font0);
-            canvas.setTextSize(2);
-            canvas.setTextColor(GREEN, BLACK);
-            canvas.setCursor(10, 101);
-            canvas.printf("%s YES", getMBTIName(ctx.splitYesType));
-
-            // 中间 VS
+            canvas.setTextSize(1);
             canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(110, 58);
-            canvas.print("VS");
+            canvas.setCursor(124, 42);
+            canvas.printf("%s (%.1f%%)", getMBTIName(ctx.closestMBTI), ctx.matchSimilarity);
 
-            // 右边：NO 侧 MBTI 雷达图
-            const PersonalityProfile& noProf = getMBTIProfile(ctx.splitNoType);
-            RadarData noData = { noProf.risk, noProf.novelty, noProf.logic, noProf.social, noProf.planning, noProf.practicality };
-            drawRadarChart(canvas, 185, 62, 28, noData, RED, DARKCYAN, false, isCN);
+            // 2. 最大分歧 MBTI (BIGGEST DIFFERENCE)
+            if (isCN) canvas.setFont(&fonts::efontCN_12);
+            else canvas.setFont(&fonts::Font0);
 
+            canvas.setTextSize(1);
+            canvas.setTextColor(LIGHTGREY, BLACK);
+            canvas.setCursor(124, 62);
+            canvas.print(isCN ? "最大分歧:" : "BIGGEST DIFF:");
+
+            canvas.setFont(&fonts::Font0);
+            canvas.setTextSize(1);
             canvas.setTextColor(RED, BLACK);
-            canvas.setCursor(145, 101);
-            canvas.printf("%s NO", getMBTIName(ctx.splitNoType));
+            canvas.setCursor(124, 76);
+            const char* diffDecTxt = isCN ? getDecisionNameCN(ctx.biggestDiffDecision) : getDecisionName(ctx.biggestDiffDecision);
+            canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
 
-            drawFooter(isCN ? "[ENTER] 探索 16 人格详情 >" : "[ENTER] EXPLORE DETAILS >", isCN);
+            // 3. 用户选择
+            if (isCN) canvas.setFont(&fonts::efontCN_12);
+            else canvas.setFont(&fonts::Font0);
+
+            canvas.setTextSize(1);
+            canvas.setTextColor(CYAN, BLACK);
+            canvas.setCursor(124, 96);
+            const char* myDecTxt = isCN ? getDecisionNameCN(ctx.userChoice) : getDecisionName(ctx.userChoice);
+            canvas.printf(isCN ? "你的选择: %s" : "YOURS: %s", myDecTxt);
+
+            if (ctx.totalPlays > 0) {
+                canvas.setFont(&fonts::Font0);
+                canvas.setTextColor(DARKGREY, BLACK);
+                canvas.setCursor(185, 5);
+                canvas.printf("PLS:%d", ctx.totalPlays);
+            }
+
+            drawFooter(isCN ? "[ENTER] 探索 16 人格 >  [ESC] 首页" : "[ENTER] EXPLORE 16 MBTI >  [ESC] HOME", isCN);
             break;
         }
 
@@ -420,95 +417,14 @@ void renderUI(const UIContext& ctx) {
                 lineY += 13;
             }
 
-            drawFooter(isCN ? "[左右] 切换  [ENTER] 做出你的选择" : "[L/R] Switch  [ENTER] Your Choice", isCN);
+            drawFooter(isCN ? "[左右] 切换  [ENTER] 下一个场景" : "[L/R] Switch  [ENTER] NEXT SCENARIO", isCN);
             break;
         }
 
-        case AppState::YOUR_CHOICE: {
-            drawHeader(isCN ? "如果是你，你怎么选？" : "WHAT WOULD YOU DO?", isCN);
-            const char* choices[] = { "YES", "NO", "MAYBE" };
-            const char* choicesCN[] = { "同意 (YES)", "拒绝 (NO)", "犹豫 (MAYBE)" };
-            for (int i = 0; i < 3; ++i) {
-                if (isCN) {
-                    canvas.setFont(&fonts::efontCN_12);
-                    canvas.setTextSize(1);
-                } else {
-                    canvas.setFont(&fonts::Font0);
-                    canvas.setTextSize(2);
-                }
-
-                canvas.setCursor(10, 38 + i * 26);
-                const char* txt = isCN ? choicesCN[i] : choices[i];
-                if (i == ctx.selectedMenuIndex) {
-                    canvas.setTextColor(GREEN, BLACK);
-                    canvas.printf("> %s", txt);
-                } else {
-                    canvas.setTextColor(WHITE, BLACK);
-                    canvas.printf("  %s", txt);
-                }
-            }
-            drawFooter(isCN ? "[上下] 移动  [ENTER] 确认选择" : "[UP/DN] Move  [ENTER] Confirm", isCN);
+        case AppState::SIMULATING:
+        case AppState::SUMMARY:
+        case AppState::BIGGEST_SPLIT:
             break;
-        }
-
-        case AppState::YOUR_MATCH: {
-            drawHeader(isCN ? "你的决策轮廓" : "DECISION PROFILE", isCN);
-            
-            // 左侧绘制用户决策轮廓雷达图
-            drawRadarChart(canvas, 62, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
-
-            if (isCN) canvas.setFont(&fonts::efontCN_12);
-            else canvas.setFont(&fonts::Font0);
-
-            // 右侧区域 (X = 128 ~ 235) 根据 MatchType 打印趣味反馈文案！
-            canvas.setTextSize(1);
-            if (ctx.matchType == MatchType::OUTLIER) {
-                canvas.setTextColor(RED, BLACK);
-                canvas.setCursor(128, 32);
-                canvas.print(isCN ? "独树一帜!" : "THE OUTLIER!");
-            } else if (ctx.matchType == MatchType::MAJORITY) {
-                canvas.setTextColor(CYAN, BLACK);
-                canvas.setCursor(128, 32);
-                canvas.print(isCN ? "大众倾向:" : "MAJORITY MATCH:");
-            } else if (ctx.matchType == MatchType::SPLIT) {
-                canvas.setTextColor(YELLOW, BLACK);
-                canvas.setCursor(128, 32);
-                canvas.print(isCN ? "分歧剧烈!" : "NO CONSENSUS!");
-            } else {
-                canvas.setTextColor(WHITE, BLACK);
-                canvas.setCursor(128, 32);
-                canvas.print(isCN ? "最相似人格:" : "CLOSEST MATCH:");
-            }
-
-            canvas.setFont(&fonts::Font0);
-            canvas.setTextSize(2);
-            canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(128, 48);
-            canvas.printf("%s", getMBTIName(ctx.closestMBTI));
-
-            if (isCN) canvas.setFont(&fonts::efontCN_12);
-            else canvas.setFont(&fonts::Font0);
-
-            canvas.setTextSize(1);
-            canvas.setTextColor(CYAN, BLACK);
-            canvas.setCursor(128, 72);
-            canvas.printf(isCN ? "相似度: %.1f%%" : "Sim: %.1f%%", ctx.matchSimilarity);
-
-            canvas.setTextColor(LIGHTGREY, BLACK);
-            canvas.setCursor(128, 88);
-            const char* userDecTxt = isCN ? getDecisionNameCN(ctx.userChoice) : getDecisionName(ctx.userChoice);
-            canvas.printf(isCN ? "你的选择: %s" : "Choice: %s", userDecTxt);
-
-            if (ctx.totalPlays > 0) {
-                canvas.setFont(&fonts::Font0);
-                canvas.setTextColor(DARKGREY, BLACK);
-                canvas.setCursor(185, 5);
-                canvas.printf("PLS:%d", ctx.totalPlays);
-            }
-
-            drawFooter(isCN ? "[ENTER] 下一个场景  [ESC] 首页" : "[ENTER] NEXT AGAIN  [ESC] HOME", isCN);
-            break;
-        }
     }
 
     // 离屏画布单次推送

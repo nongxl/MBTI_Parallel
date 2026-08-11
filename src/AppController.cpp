@@ -52,6 +52,37 @@ static MatchType determineMatchType(const UIContext& ctx) {
     return MatchType::MATCH;
 }
 
+static void findBiggestDifferenceMBTI(const UIContext& ctx, MBTIType& outDiffMBTI, Decision& outDiffDecision) {
+    float maxDist = -1.0f;
+    outDiffMBTI = MBTIType::ESTJ;
+    outDiffDecision = Decision::NO;
+
+    for (int i = 0; i < MBTI_COUNT; ++i) {
+        const PersonalityProfile& prof = getMBTIProfile(static_cast<MBTIType>(i));
+        
+        // 计算 6 维归一化欧氏距离
+        float dRisk = (ctx.userProfile.risk - prof.risk);
+        float dNov  = (ctx.userProfile.novelty - prof.novelty);
+        float dLog  = (ctx.userProfile.logic - prof.logic);
+        float dSoc  = (ctx.userProfile.social - prof.social);
+        float dPla  = (ctx.userProfile.planning - prof.planning);
+        float dPra  = (ctx.userProfile.practicality - prof.practicality);
+
+        float dist = sqrtf(dRisk*dRisk + dNov*dNov + dLog*dLog + dSoc*dSoc + dPla*dPla + dPra*dPra);
+
+        // 如果决策相反，额外给予大权重阻尼奖赏
+        if (ctx.results[i].decision != ctx.userChoice) {
+            dist += 40.0f;
+        }
+
+        if (dist > maxDist) {
+            maxDist = dist;
+            outDiffMBTI = static_cast<MBTIType>(i);
+            outDiffDecision = ctx.results[i].decision;
+        }
+    }
+}
+
 static void triggerRandomScenario(UIContext& ctx) {
     // 离线程序化场景生成管线：生成 5 Candidate 选优输出
     GeneratedScenario gen = generateProceduralScenario(ctx.recentDNAs, ctx.dnaHistoryCount);
@@ -73,7 +104,7 @@ static void triggerRandomScenario(UIContext& ctx) {
 
 void initApp(UIContext& ctx) {
     ctx.state = AppState::HOME;
-    ctx.lang = Language::ENGLISH;
+    ctx.lang = Language::CHINESE; // 默认语言设为中文
     ctx.selectedMenuIndex = 0;
     ctx.exploreIndex = 0;
     ctx.userChoice = Decision::YES;
@@ -104,6 +135,8 @@ void initApp(UIContext& ctx) {
     ctx.currentScenario = buildScenario(ctx.currentSelection);
     ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
     ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
+    ctx.biggestDiffMBTI = MBTIType::ESTJ;
+    ctx.biggestDiffDecision = Decision::NO;
     ctx.matchType = MatchType::MATCH;
 }
 
@@ -115,31 +148,29 @@ void updateApp(UIContext& ctx, uint32_t currentMillis) {
         }
 
         uint32_t elapsed = currentMillis - ctx.animStartTime;
-        ctx.animProgress = (elapsed * 100) / 1000; // 1000ms 持续时间动画
+        ctx.animProgress = (elapsed * 100) / 1000;
 
         if (ctx.animProgress >= 100) {
             ctx.animProgress = 100;
-            // 引擎计算 16 人格模拟结果
             simulateAll(ctx.currentScenario, ctx.results);
             ctx.summary = summarizeResults(ctx.results);
             findBiggestSplit(ctx.results, ctx.splitYesType, ctx.splitNoType);
             
             ctx.state = AppState::SUMMARY;
             ctx.selectedMenuIndex = 0;
-            renderUI(ctx); // 自动完成后，立即强制重绘，呈现 SUMMARY 汇总界面
+            renderUI(ctx);
         }
     }
 
     // 2. 处理六维雷达极坐标平滑补间形变插值 (400ms Quintic Ease-Out 高阶五次方丝滑缓动)
     if (ctx.isRadarAnimActive) {
         uint32_t elapsed = currentMillis - ctx.radarAnimStartTime;
-        float rawT = elapsed / 400.0f; // 400ms 极佳动效区间
+        float rawT = elapsed / 400.0f;
         if (rawT >= 1.0f) {
             rawT = 1.0f;
             ctx.isRadarAnimActive = false;
         }
 
-        // 应用 Quintic Ease-Out 缓动曲线
         float easeT = quinticEaseOut(rawT);
 
         ctx.currentRadar.risk = ctx.startRadar.risk + (ctx.endRadar.risk - ctx.startRadar.risk) * easeT;
@@ -158,9 +189,9 @@ void handleInput(UIContext& ctx, KeyInput key) {
     switch (ctx.state) {
         case AppState::HOME:
             if (key == KeyInput::LEFT) {
-                ctx.lang = Language::ENGLISH;
+                ctx.lang = Language::CHINESE; // 左键切选中文
             } else if (key == KeyInput::RIGHT) {
-                ctx.lang = Language::CHINESE;
+                ctx.lang = Language::ENGLISH; // 右键切选英文
             } else if (key == KeyInput::ENTER) {
                 // 锁存语言并触发程序化场景开局
                 triggerRandomScenario(ctx);
@@ -295,56 +326,11 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
         case AppState::BUILDER_PREVIEW:
             if (key == KeyInput::ENTER) {
-                ctx.state = AppState::SIMULATING;
-                ctx.animStartTime = 0;
-                ctx.animProgress = 0;
-            } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::HOME;
-                ctx.selectedMenuIndex = 0;
-            }
-            break;
-
-        case AppState::SIMULATING:
-            // 自动流转
-            break;
-
-        case AppState::SUMMARY:
-            if (key == KeyInput::ENTER) {
-                ctx.state = AppState::BIGGEST_SPLIT;
-            }
-            break;
-
-        case AppState::BIGGEST_SPLIT:
-            if (key == KeyInput::ENTER || key == KeyInput::RIGHT) {
-                ctx.state = AppState::EXPLORE;
-                ctx.exploreIndex = static_cast<int>(ctx.splitYesType);
-
-                // 初始化 Explore 屏的雷达形态
-                const PersonalityProfile& pProf = getMBTIProfile(ctx.results[ctx.exploreIndex].personality);
-                RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
-                ctx.currentRadar = target;
-                ctx.startRadar = target;
-                ctx.endRadar = target;
-                ctx.isRadarAnimActive = false;
-            }
-            break;
-
-        case AppState::EXPLORE:
-            if (key == KeyInput::LEFT || key == KeyInput::RIGHT) {
-                if (key == KeyInput::LEFT) {
-                    ctx.exploreIndex = (ctx.exploreIndex + 15) % 16;
-                } else {
-                    ctx.exploreIndex = (ctx.exploreIndex + 1) % 16;
-                }
-                // 启动 400ms 丝滑 Quintic Ease-Out 缓动雷达形变
-                const PersonalityProfile& pProf = getMBTIProfile(ctx.results[ctx.exploreIndex].personality);
-                RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
-                startRadarAnimation(ctx, target, now);
-            } else if (key == KeyInput::ENTER) {
                 ctx.state = AppState::YOUR_CHOICE;
                 ctx.selectedMenuIndex = 0;
             } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::SUMMARY;
+                ctx.state = AppState::HOME;
+                ctx.selectedMenuIndex = 0;
             }
             break;
 
@@ -357,9 +343,14 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 Decision choices[] = { Decision::YES, Decision::NO, Decision::MAYBE };
                 ctx.userChoice = choices[ctx.selectedMenuIndex];
 
-                // 计算用户的决策轮廓与相近度最高的人格
+                // 瞬间在后台计算 16 种 MBTI 分支推演
+                simulateAll(ctx.currentScenario, ctx.results);
+                ctx.summary = summarizeResults(ctx.results);
+
+                // 计算用户的决策轮廓、最相似 MBTI 以及分歧最大 MBTI
                 ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
                 ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
+                findBiggestDifferenceMBTI(ctx, ctx.biggestDiffMBTI, ctx.biggestDiffDecision);
                 ctx.matchType = determineMatchType(ctx);
 
                 // 启动用户 Profile 雷达图的过渡呈现
@@ -373,21 +364,51 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 };
                 startRadarAnimation(ctx, target, now);
 
+                // 直接进入 Reveal 揭晓屏
                 ctx.state = AppState::YOUR_MATCH;
             } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::EXPLORE;
+                ctx.state = AppState::BUILDER_PREVIEW;
             }
             break;
 
         case AppState::YOUR_MATCH:
             if (key == KeyInput::ENTER) {
-                // 【Quick Play 畅玩无限闭环】递增总次数，程序化生成下一个全新的独一无二场景！
+                ctx.state = AppState::EXPLORE;
+                ctx.exploreIndex = static_cast<int>(ctx.closestMBTI);
+
+                const PersonalityProfile& pProf = getMBTIProfile(ctx.results[ctx.exploreIndex].personality);
+                RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
+                startRadarAnimation(ctx, target, now);
+            } else if (key == KeyInput::BACK) {
+                ctx.state = AppState::HOME;
+                ctx.selectedMenuIndex = 0;
+            }
+            break;
+
+        case AppState::EXPLORE:
+            if (key == KeyInput::LEFT || key == KeyInput::RIGHT) {
+                if (key == KeyInput::LEFT) {
+                    ctx.exploreIndex = (ctx.exploreIndex + 15) % 16;
+                } else {
+                    ctx.exploreIndex = (ctx.exploreIndex + 1) % 16;
+                }
+                const PersonalityProfile& pProf = getMBTIProfile(ctx.results[ctx.exploreIndex].personality);
+                RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
+                startRadarAnimation(ctx, target, now);
+            } else if (key == KeyInput::ENTER) {
                 ctx.totalPlays++;
                 triggerRandomScenario(ctx);
                 ctx.state = AppState::BUILDER_PREVIEW;
             } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::HOME;
-                ctx.selectedMenuIndex = 0;
+                ctx.state = AppState::YOUR_MATCH;
+            }
+            break;
+
+        case AppState::SIMULATING:
+        case AppState::SUMMARY:
+        case AppState::BIGGEST_SPLIT:
+            if (key == KeyInput::ENTER) {
+                ctx.state = AppState::EXPLORE;
             }
             break;
     }
