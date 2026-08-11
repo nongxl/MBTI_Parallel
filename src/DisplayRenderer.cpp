@@ -41,7 +41,6 @@ static void drawHeader(const char* title, bool isCN) {
     canvas.drawLine(0, 22, 240, 22, GREEN);
 }
 
-// 统一将全局操作提示指引颜色改为低调低明度的淡灰色 (0x7BEF / DARKGREY)，与主内容做视觉区分
 static void drawFooter(const char* hint, bool isCN) {
     canvas.setTextColor(0x7BEF, BLACK); // 低调淡灰色
     if (isCN) {
@@ -110,17 +109,17 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 图层 1: 【背景大标题 PARALLEL】(大号鲜艳黄色 YELLOW 字体)
+            // 图层 1: 【背景大标题 PARALLEL】
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(3);
             canvas.setCursor(48, 28);
             canvas.print("PARALLEL");
 
-            // 图层 2: 【前景巨幅六边形发光雷达图】(半径放大至 50px，高科技极客范十足)
+            // 图层 2: 【前景巨幅六边形发光雷达图】(半径 50px)
             drawRadarChart(canvas, 120, 42, 50, homeData, GREEN, DARKCYAN, false, isCN);
 
-            // 图层 3: 【开机精简三选项横向排版】([🎲 随机] [🛠️ 自定义] [👤 画像])
+            // 图层 3: 【开机精简三选项横向排版】([1. 随机] [2. 自定义] [3. 画像] 原生字库完美兼容)
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
@@ -128,32 +127,32 @@ void renderUI(const UIContext& ctx) {
                 int yPos = 103;
                 if (ctx.bootMenuMode == 0) {
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(10, yPos);
-                    canvas.print("> [🎲 随机]");
+                    canvas.setCursor(12, yPos);
+                    canvas.print("> [1. 随机]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(88, yPos);
-                    canvas.print("  [🛠️ 自定义]");
-                    canvas.setCursor(170, yPos);
-                    canvas.print("  [👤 画像]");
+                    canvas.setCursor(90, yPos);
+                    canvas.print("  [2. 自定义]");
+                    canvas.setCursor(174, yPos);
+                    canvas.print("  [3. 画像]");
                 } else if (ctx.bootMenuMode == 1) {
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(10, yPos);
-                    canvas.print("  [🎲 随机]");
+                    canvas.setCursor(12, yPos);
+                    canvas.print("  [1. 随机]");
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(88, yPos);
-                    canvas.print("> [🛠️ 自定义]");
+                    canvas.setCursor(90, yPos);
+                    canvas.print("> [2. 自定义]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(170, yPos);
-                    canvas.print("  [👤 画像]");
+                    canvas.setCursor(174, yPos);
+                    canvas.print("  [3. 画像]");
                 } else {
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(10, yPos);
-                    canvas.print("  [🎲 随机]");
-                    canvas.setCursor(88, yPos);
-                    canvas.print("  [🛠️ 自定义]");
+                    canvas.setCursor(12, yPos);
+                    canvas.print("  [1. 随机]");
+                    canvas.setCursor(90, yPos);
+                    canvas.print("  [2. 自定义]");
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(170, yPos);
-                    canvas.print("> [👤 画像]");
+                    canvas.setCursor(174, yPos);
+                    canvas.print("> [3. 画像]");
                 }
             } else {
                 canvas.setFont(&fonts::Font0);
@@ -163,36 +162,36 @@ void renderUI(const UIContext& ctx) {
                 if (ctx.bootMenuMode == 0) {
                     canvas.setTextColor(CYAN, BLACK);
                     canvas.setCursor(8, yPos);
-                    canvas.print(">[RANDOM]");
+                    canvas.print(">[1. RANDOM]");
                     canvas.setTextColor(0x7BEF, BLACK);
                     canvas.setCursor(88, yPos);
-                    canvas.print(" [CREATE]");
+                    canvas.print(" [2. CREATE]");
                     canvas.setCursor(168, yPos);
-                    canvas.print(" [PROFILE]");
+                    canvas.print(" [3. PROFILE]");
                 } else if (ctx.bootMenuMode == 1) {
                     canvas.setTextColor(0x7BEF, BLACK);
                     canvas.setCursor(8, yPos);
-                    canvas.print(" [RANDOM]");
+                    canvas.print(" [1. RANDOM]");
                     canvas.setTextColor(CYAN, BLACK);
                     canvas.setCursor(88, yPos);
-                    canvas.print(">[CREATE]");
+                    canvas.print(">[2. CREATE]");
                     canvas.setTextColor(0x7BEF, BLACK);
                     canvas.setCursor(168, yPos);
-                    canvas.print(" [PROFILE]");
+                    canvas.print(" [3. PROFILE]");
                 } else {
                     canvas.setTextColor(0x7BEF, BLACK);
                     canvas.setCursor(8, yPos);
-                    canvas.print(" [RANDOM]");
+                    canvas.print(" [1. RANDOM]");
                     canvas.setCursor(88, yPos);
-                    canvas.print(" [CREATE]");
+                    canvas.print(" [2. CREATE]");
                     canvas.setTextColor(CYAN, BLACK);
                     canvas.setCursor(168, yPos);
-                    canvas.print(">[PROFILE]");
+                    canvas.print(">[3. PROFILE]");
                 }
             }
 
-            // 图层 4: 底栏 Footer 引导 (低调淡灰色 0x7BEF)
-            const char* homeFooter = isCN ? "[左右] 切换模式  [ENTER] 开始" : "[L/R] Select Mode  [ENTER] Start";
+            // 图层 4: 底栏 Footer 引导
+            const char* homeFooter = isCN ? "[左右] 移动选项  [ENTER] 开始" : "[L/R] Move  [ENTER] Start";
             drawFooter(homeFooter, isCN);
 
             if (ctx.totalPlays > 0) {

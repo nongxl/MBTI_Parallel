@@ -221,10 +221,10 @@ void handleInput(UIContext& ctx, KeyInput key) {
         }
 
         case AppState::HOME:
-            if (key == KeyInput::UP) {
-                ctx.bootMenuMode = (ctx.bootMenuMode + 2) % 3;
-            } else if (key == KeyInput::DOWN) {
-                ctx.bootMenuMode = (ctx.bootMenuMode + 1) % 3;
+            if (key == KeyInput::LEFT || key == KeyInput::UP) {
+                ctx.bootMenuMode = (ctx.bootMenuMode + 2) % 3; // 向左/向上移动
+            } else if (key == KeyInput::RIGHT || key == KeyInput::DOWN) {
+                ctx.bootMenuMode = (ctx.bootMenuMode + 1) % 3; // 向右/向下移动
             } else if (key == KeyInput::ENTER) {
                 if (ctx.bootMenuMode == 0) {
                     triggerRandomScenario(ctx);
@@ -249,14 +249,10 @@ void handleInput(UIContext& ctx, KeyInput key) {
             break;
 
         case AppState::MY_PROFILE:
-            if (key == KeyInput::ENTER) {
-                ctx.state = AppState::HOME;
-                ctx.selectedMenuIndex = 0;
-            } else if (key == KeyInput::BACK) {
+            if (key == KeyInput::ENTER || key == KeyInput::BACK) {
                 ctx.state = AppState::HOME;
                 ctx.selectedMenuIndex = 0;
             } else if (key == KeyInput::UP || key == KeyInput::DOWN) {
-                // 按上下方向键触发清空弹窗二次确认
                 ctx.state = AppState::MY_PROFILE_CLEAR_CONFIRM;
                 ctx.selectedMenuIndex = 1; // 默认选中 1 (取消)
             }
@@ -269,7 +265,6 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 ctx.selectedMenuIndex = 1; // 2. 取消 (CANCEL)
             } else if (key == KeyInput::ENTER) {
                 if (ctx.selectedMenuIndex == 0) {
-                    // 确认清空: 重置内存与擦除 ESP32 NVS Flash 历史
                     ctx.userHistory.totalPlays = 0;
                     ctx.userHistory.yesCount = 0;
                     ctx.userHistory.noCount = 0;
