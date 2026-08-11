@@ -61,6 +61,8 @@ struct GeneratedScenario {
     ScenarioDNA dna;
     char title[32];
     char description[80];
+    char titleCN[32];
+    char descriptionCN[80];
     Scenario scenario;
     float qualityScore;
 };
@@ -71,7 +73,7 @@ constexpr int CANDIDATE_POOL_SIZE = 5;
 // 相似度计算 (0% ~ 100%)
 float calculateDNASimilarity(const ScenarioDNA& a, const ScenarioDNA& b);
 
-// 离线程序化场景生成核心接口 (从 5 个 Candidates 中根据多样性与 MBTI 分歧度选优)
+// 离线程序化场景生成核心接口
 GeneratedScenario generateProceduralScenario(const ScenarioDNA recentDNAs[10], int historyCount);
 
 #endif // SCENARIO_GENERATOR_H

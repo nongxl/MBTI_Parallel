@@ -58,6 +58,8 @@ static void triggerRandomScenario(UIContext& ctx) {
     ctx.currentScenario = gen.scenario;
     snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", gen.title);
     snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "%s", gen.description);
+    snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "%s", gen.titleCN);
+    snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "%s", gen.descriptionCN);
 
     // 将选出的 DNA 压入 10 次历史记录
     for (int i = RECENT_DNA_HISTORY_SIZE - 1; i > 0; --i) {
@@ -71,6 +73,7 @@ static void triggerRandomScenario(UIContext& ctx) {
 
 void initApp(UIContext& ctx) {
     ctx.state = AppState::HOME;
+    ctx.lang = Language::ENGLISH;
     ctx.selectedMenuIndex = 0;
     ctx.exploreIndex = 0;
     ctx.userChoice = Decision::YES;
@@ -95,8 +98,10 @@ void initApp(UIContext& ctx) {
 
     snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "CUSTOM SCENARIO");
     snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "User-constructed decision scenario.");
-    ctx.currentScenario = buildScenario(ctx.currentSelection);
+    snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "自定义模拟场景");
+    snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "用户自定义建立的决策测试场景。");
 
+    ctx.currentScenario = buildScenario(ctx.currentSelection);
     ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
     ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
     ctx.matchType = MatchType::MATCH;
@@ -134,7 +139,7 @@ void updateApp(UIContext& ctx, uint32_t currentMillis) {
             ctx.isRadarAnimActive = false;
         }
 
-        // 应用 Quintic Ease-Out 缓动曲线 (拉伸迅速，后段极其柔顺地慢慢减速停驻)
+        // 应用 Quintic Ease-Out 缓动曲线
         float easeT = quinticEaseOut(rawT);
 
         ctx.currentRadar.risk = ctx.startRadar.risk + (ctx.endRadar.risk - ctx.startRadar.risk) * easeT;
@@ -152,8 +157,12 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
     switch (ctx.state) {
         case AppState::HOME:
-            if (key == KeyInput::ENTER) {
-                // 程序化场景生成开局
+            if (key == KeyInput::LEFT) {
+                ctx.lang = Language::ENGLISH;
+            } else if (key == KeyInput::RIGHT) {
+                ctx.lang = Language::CHINESE;
+            } else if (key == KeyInput::ENTER) {
+                // 锁存语言并触发程序化场景开局
                 triggerRandomScenario(ctx);
                 ctx.state = AppState::BUILDER_PREVIEW;
             }
@@ -270,6 +279,8 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 ctx.currentSelection.priority = p[idx];
                 snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "CUSTOM SCENARIO");
                 snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "User-constructed decision scenario.");
+                snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "自定义模拟场景");
+                snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "用户自定义建立的决策测试场景。");
                 ctx.currentScenario = buildScenario(ctx.currentSelection);
                 ctx.state = AppState::BUILDER_PREVIEW;
                 return;
@@ -325,7 +336,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 } else {
                     ctx.exploreIndex = (ctx.exploreIndex + 1) % 16;
                 }
-                // 启动 400ms 丝滑 Quintic Ease-Out 缓动雷达形变 (从当前时刻 currentRadar 平滑连续流动)
+                // 启动 400ms 丝滑 Quintic Ease-Out 缓动雷达形变
                 const PersonalityProfile& pProf = getMBTIProfile(ctx.results[ctx.exploreIndex].personality);
                 RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
                 startRadarAnimation(ctx, target, now);

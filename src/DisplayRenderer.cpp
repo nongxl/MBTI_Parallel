@@ -43,6 +43,8 @@ static void drawFooter(const char* hint) {
 
 void renderUI(const UIContext& ctx) {
 #ifdef ARDUINO
+    bool isCN = (ctx.lang == Language::CHINESE);
+
     switch (ctx.state) {
         case AppState::HOME: {
             canvas.fillScreen(BLACK);
@@ -59,20 +61,26 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 绘制更强震撼放大的科技感主六边形图 (centerX = 120, centerY = 46, radius = 48)
+            // 绘制大幅放大的科技感主六边形图 (centerX = 120, centerY = 46, radius = 48)
             drawRadarChart(canvas, 120, 46, 48, homeData, GREEN, DARKCYAN, false);
 
-            // 标题文字 PARALLEL 向下移至 Y = 98
+            // 标题文字 PARALLEL
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(2);
-            canvas.setCursor(72, 98);
+            canvas.setCursor(72, 96);
             canvas.print("PARALLEL");
 
-            // 操作提示 PRESS ENTER TO START 向下移至 Y = 118
-            canvas.setTextColor(CYAN, BLACK);
+            // 开机界面语言选择控件: [ENGLISH] / [中文] 自由切选！
             canvas.setTextSize(1);
-            canvas.setCursor(62, 118);
-            canvas.print("PRESS ENTER TO START");
+            if (!isCN) {
+                canvas.setTextColor(CYAN, BLACK);
+                canvas.setCursor(42, 118);
+                canvas.print("> [ENGLISH] <   [中文]");
+            } else {
+                canvas.setTextColor(CYAN, BLACK);
+                canvas.setCursor(42, 118);
+                canvas.print("  [ENGLISH]   > [中文] <");
+            }
 
             if (ctx.totalPlays > 0) {
                 canvas.setTextColor(DARKGREY, BLACK);
@@ -87,52 +95,57 @@ void renderUI(const UIContext& ctx) {
         case AppState::BUILDER_CONCERN:
         case AppState::BUILDER_INTENSITY:
         case AppState::BUILDER_PRIORITY: {
-            const char* title = "STEP";
-            if (ctx.state == AppState::BUILDER_TYPE) title = "1. DECISION TYPE";
-            else if (ctx.state == AppState::BUILDER_MOTIVATION) title = "2. MOTIVATION";
-            else if (ctx.state == AppState::BUILDER_CONCERN) title = "3. MAIN CONCERN";
-            else if (ctx.state == AppState::BUILDER_INTENSITY) title = "4. INTENSITY";
-            else if (ctx.state == AppState::BUILDER_PRIORITY) title = "5. PRIORITY";
+            const char* title = isCN ? "步骤" : "STEP";
+            if (ctx.state == AppState::BUILDER_TYPE) title = isCN ? "1. 决策动作" : "1. DECISION TYPE";
+            else if (ctx.state == AppState::BUILDER_MOTIVATION) title = isCN ? "2. 驱动动机" : "2. MOTIVATION";
+            else if (ctx.state == AppState::BUILDER_CONCERN) title = isCN ? "3. 核心顾虑" : "3. MAIN CONCERN";
+            else if (ctx.state == AppState::BUILDER_INTENSITY) title = isCN ? "4. 强度级别" : "4. INTENSITY";
+            else if (ctx.state == AppState::BUILDER_PRIORITY) title = isCN ? "5. 优先偏好" : "5. PRIORITY";
 
             drawHeader(title);
 
             // 2D 网格排列
             int count = 0;
             const char* items[8];
+            const char* itemsCN[8];
             const char* icons[] = { "◇", "○", "△", "□", "☆", "⬡" };
 
             if (ctx.state == AppState::BUILDER_TYPE) {
                 count = 6;
                 items[0]="GET"; items[1]="GO"; items[2]="DO"; items[3]="SAY"; items[4]="CHOOSE"; items[5]="CHANGE";
+                itemsCN[0]="获得"; itemsCN[1]="前往"; itemsCN[2]="执行"; itemsCN[3]="表达"; itemsCN[4]="选择"; itemsCN[5]="改变";
             } else if (ctx.state == AppState::BUILDER_MOTIVATION) {
                 count = 5;
                 items[0]="WANT"; items[1]="NEED"; items[2]="CURIOUS"; items[3]="FUN"; items[4]="OPPORTUNITY";
+                itemsCN[0]="渴望"; itemsCN[1]="刚需"; itemsCN[2]="好奇"; itemsCN[3]="乐趣"; itemsCN[4]="机遇";
             } else if (ctx.state == AppState::BUILDER_CONCERN) {
                 count = 6;
                 items[0]="RISK"; items[1]="COST"; items[2]="TIME"; items[3]="EFFORT"; items[4]="UNKNOWN"; items[5]="NONE";
+                itemsCN[0]="风险"; itemsCN[1]="花费"; itemsCN[2]="耗时"; itemsCN[3]="精力和"; itemsCN[4]="未知"; itemsCN[5]="无";
             } else if (ctx.state == AppState::BUILDER_INTENSITY) {
                 count = 3;
                 items[0]="LOW"; items[1]="MEDIUM"; items[2]="HIGH";
+                itemsCN[0]="轻度"; itemsCN[1]="中度"; itemsCN[2]="重度";
             } else if (ctx.state == AppState::BUILDER_PRIORITY) {
                 count = 4;
                 items[0]="EXPERIENCE"; items[1]="PRACTICAL"; items[2]="PEOPLE"; items[3]="SAFETY";
+                itemsCN[0]="体验"; itemsCN[1]="实用"; itemsCN[2]="人际"; itemsCN[3]="安全";
             }
 
             if (ctx.state == AppState::BUILDER_INTENSITY) {
-                // 3列 1行 水平横向网格
                 for (int i = 0; i < count; ++i) {
                     canvas.setTextSize(2);
                     canvas.setCursor(6 + i * 76, 50);
+                    const char* txt = isCN ? itemsCN[i] : items[i];
                     if (i == ctx.selectedMenuIndex) {
                         canvas.setTextColor(CYAN, BLACK);
-                        canvas.printf(">%s", items[i]);
+                        canvas.printf(">%s", txt);
                     } else {
                         canvas.setTextColor(WHITE, BLACK);
-                        canvas.printf(" %s", items[i]);
+                        canvas.printf(" %s", txt);
                     }
                 }
             } else {
-                // 2列 多行 双栏 2D 网格
                 for (int i = 0; i < count; ++i) {
                     int col = i % 2;
                     int row = i / 2;
@@ -141,35 +154,39 @@ void renderUI(const UIContext& ctx) {
 
                     canvas.setTextSize(2);
                     canvas.setCursor(x, y);
+                    const char* txt = isCN ? itemsCN[i] : items[i];
                     if (i == ctx.selectedMenuIndex) {
                         canvas.setTextColor(CYAN, BLACK);
-                        canvas.printf("> %s %s", icons[i % 6], items[i]);
+                        canvas.printf("> %s %s", icons[i % 6], txt);
                     } else {
                         canvas.setTextColor(WHITE, BLACK);
-                        canvas.printf("  %s %s", icons[i % 6], items[i]);
+                        canvas.printf("  %s %s", icons[i % 6], txt);
                     }
                 }
             }
 
-            drawFooter("[ARR] 2D Move [ENTER] Select [ESC] Back");
+            drawFooter(isCN ? "[方向] 2D选择 [ENTER] 确定 [ESC] 返回" : "[ARR] 2D Move [ENTER] Select [ESC] Back");
             break;
         }
 
         case AppState::BUILDER_PREVIEW: {
-            drawHeader("SCENARIO PREVIEW");
+            drawHeader(isCN ? "场景预览" : "SCENARIO PREVIEW");
             canvas.setTextSize(1);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setCursor(6, 28);
-            canvas.print(ctx.currentScenarioTitle ? ctx.currentScenarioTitle : "SCENARIO");
+            const char* titleTxt = isCN ? (ctx.currentScenarioTitleCN ? ctx.currentScenarioTitleCN : "离线情境")
+                                        : (ctx.currentScenarioTitle ? ctx.currentScenarioTitle : "SCENARIO");
+            canvas.print(titleTxt);
 
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(6, 44);
             // 自动折行打印场景描述
-            const char* desc = ctx.currentScenarioDesc ? ctx.currentScenarioDesc : "";
+            const char* desc = isCN ? (ctx.currentScenarioDescCN ? ctx.currentScenarioDescCN : "")
+                                    : (ctx.currentScenarioDesc ? ctx.currentScenarioDesc : "");
             int lineY = 44;
             while (*desc && lineY <= 90) {
-                char buf[20] = {0};
-                strncpy(buf, desc, 18);
+                char buf[22] = {0};
+                strncpy(buf, desc, isCN ? 12 : 18);
                 canvas.setCursor(6, lineY);
                 canvas.print(buf);
                 desc += strlen(buf);
@@ -187,16 +204,16 @@ void renderUI(const UIContext& ctx) {
             };
             drawRadarChart(canvas, 182, 65, 32, prevData, CYAN, DARKCYAN, false);
 
-            drawFooter("[ENTER] SIMULATE  [ESC] HOME");
+            drawFooter(isCN ? "[ENTER] 开始模拟  [ESC] 首页" : "[ENTER] SIMULATE  [ESC] HOME");
             break;
         }
 
         case AppState::SIMULATING: {
-            drawHeader("SIMULATING...");
+            drawHeader(isCN ? "正在模拟推演..." : "SIMULATING...");
             canvas.setTextSize(2);
             canvas.setTextColor(GREEN, BLACK);
             canvas.setCursor(20, 36);
-            canvas.print("16 BRANCHES");
+            canvas.print(isCN ? "16 人格分支" : "16 BRANCHES");
 
             // 绘制进度条
             int barWidth = (int)(ctx.animProgress * 1.9f);
@@ -206,37 +223,37 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextSize(1);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setCursor(65, 96);
-            canvas.printf("ANALYZING %d%%...", ctx.animProgress);
+            canvas.printf(isCN ? "计算分析中 %d%%..." : "ANALYZING %d%%...", ctx.animProgress);
             break;
         }
 
         case AppState::SUMMARY: {
-            drawHeader("SIMULATION RESULT");
+            drawHeader(isCN ? "模拟分支汇总" : "SIMULATION RESULT");
             canvas.setTextSize(2);
             
             canvas.setTextColor(GREEN, BLACK);
             canvas.setCursor(10, 35);
-            canvas.printf("YES   : %2d", ctx.summary.yesCount);
+            canvas.printf(isCN ? "同意  : %2d" : "YES   : %2d", ctx.summary.yesCount);
 
             canvas.setTextColor(RED, BLACK);
             canvas.setCursor(10, 60);
-            canvas.printf("NO    : %2d", ctx.summary.noCount);
+            canvas.printf(isCN ? "拒绝  : %2d" : "NO    : %2d", ctx.summary.noCount);
 
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setCursor(10, 85);
-            canvas.printf("MAYBE : %2d", ctx.summary.maybeCount);
+            canvas.printf(isCN ? "犹豫  : %2d" : "MAYBE : %2d", ctx.summary.maybeCount);
 
             // 右侧示意柱状占比图
             canvas.fillRect(145, 38, ctx.summary.yesCount * 6, 12, GREEN);
             canvas.fillRect(145, 63, ctx.summary.noCount * 6, 12, RED);
             canvas.fillRect(145, 88, ctx.summary.maybeCount * 6, 12, YELLOW);
 
-            drawFooter("[ENTER] BIGGEST SPLIT >");
+            drawFooter(isCN ? "[ENTER] 查看最大分歧 >" : "[ENTER] BIGGEST SPLIT >");
             break;
         }
 
         case AppState::BIGGEST_SPLIT: {
-            drawHeader("BIGGEST SPLIT");
+            drawHeader(isCN ? "最大性格分歧" : "BIGGEST SPLIT");
             
             const PersonalityProfile& yesProf = getMBTIProfile(ctx.splitYesType);
             RadarData yesData = { yesProf.risk, yesProf.novelty, yesProf.logic, yesProf.social, yesProf.planning, yesProf.practicality };
@@ -261,7 +278,7 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(145, 101);
             canvas.printf("%s NO", getMBTIName(ctx.splitNoType));
 
-            drawFooter("[ENTER] EXPLORE DETAILS >");
+            drawFooter(isCN ? "[ENTER] 探索 16 人格详情 >" : "[ENTER] EXPLORE DETAILS >");
             break;
         }
 
@@ -278,7 +295,7 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(6, 28);
-            canvas.print("Choice: ");
+            canvas.print(isCN ? "选择: " : "Choice: ");
 
             canvas.setTextSize(2);
             if (res.decision == Decision::YES) {
@@ -293,11 +310,11 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(6, 50);
-            canvas.printf("Score : %.1f", res.score);
+            canvas.printf(isCN ? "得分: %.1f" : "Score : %.1f", res.score);
 
             canvas.setCursor(6, 66);
             canvas.setTextColor(CYAN, BLACK);
-            canvas.print("Reason:");
+            canvas.print(isCN ? "依据:" : "Reason:");
 
             const char* pReason = res.reason;
             int lineY = 79;
@@ -327,31 +344,32 @@ void renderUI(const UIContext& ctx) {
                 lineY += 13;
             }
 
-            drawFooter("[L/R] Switch  [ENTER] Your Choice");
+            drawFooter(isCN ? "[左右] 切换  [ENTER] 做出你的选择" : "[L/R] Switch  [ENTER] Your Choice");
             break;
         }
 
         case AppState::YOUR_CHOICE: {
-            drawHeader("WHAT WOULD YOU DO?");
+            drawHeader(isCN ? "如果是你，你怎么选？" : "WHAT WOULD YOU DO?");
             const char* choices[] = { "YES", "NO", "MAYBE" };
+            const char* choicesCN[] = { "同意 (YES)", "拒绝 (NO)", "犹豫 (MAYBE)" };
             for (int i = 0; i < 3; ++i) {
                 canvas.setTextSize(2);
                 canvas.setCursor(10, 38 + i * 26);
+                const char* txt = isCN ? choicesCN[i] : choices[i];
                 if (i == ctx.selectedMenuIndex) {
                     canvas.setTextColor(GREEN, BLACK);
-                    canvas.print("> ");
+                    canvas.printf("> %s", txt);
                 } else {
                     canvas.setTextColor(WHITE, BLACK);
-                    canvas.print("  ");
+                    canvas.printf("  %s", txt);
                 }
-                canvas.print(choices[i]);
             }
-            drawFooter("[UP/DN] Move  [ENTER] Confirm");
+            drawFooter(isCN ? "[上下] 移动  [ENTER] 确认选择" : "[UP/DN] Move  [ENTER] Confirm");
             break;
         }
 
         case AppState::YOUR_MATCH: {
-            drawHeader("DECISION PROFILE");
+            drawHeader(isCN ? "你的决策轮廓" : "DECISION PROFILE");
             
             // 左侧绘制用户决策轮廓雷达图
             drawRadarChart(canvas, 62, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true);
@@ -361,19 +379,19 @@ void renderUI(const UIContext& ctx) {
             if (ctx.matchType == MatchType::OUTLIER) {
                 canvas.setTextColor(RED, BLACK);
                 canvas.setCursor(128, 32);
-                canvas.print("THE OUTLIER!");
+                canvas.print(isCN ? "独树一帜!" : "THE OUTLIER!");
             } else if (ctx.matchType == MatchType::MAJORITY) {
                 canvas.setTextColor(CYAN, BLACK);
                 canvas.setCursor(128, 32);
-                canvas.print("MAJORITY MATCH:");
+                canvas.print(isCN ? "大众倾向:" : "MAJORITY MATCH:");
             } else if (ctx.matchType == MatchType::SPLIT) {
                 canvas.setTextColor(YELLOW, BLACK);
                 canvas.setCursor(128, 32);
-                canvas.print("NO CONSENSUS!");
+                canvas.print(isCN ? "分歧剧烈!" : "NO CONSENSUS!");
             } else {
                 canvas.setTextColor(WHITE, BLACK);
                 canvas.setCursor(128, 32);
-                canvas.print("CLOSEST MATCH:");
+                canvas.print(isCN ? "最相似人格:" : "CLOSEST MATCH:");
             }
 
             canvas.setTextSize(2);
@@ -384,11 +402,11 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextSize(1);
             canvas.setTextColor(CYAN, BLACK);
             canvas.setCursor(128, 72);
-            canvas.printf("Sim: %.1f%%", ctx.matchSimilarity);
+            canvas.printf(isCN ? "相似度: %.1f%%" : "Sim: %.1f%%", ctx.matchSimilarity);
 
             canvas.setTextColor(LIGHTGREY, BLACK);
             canvas.setCursor(128, 88);
-            canvas.printf("Choice: %s", getDecisionName(ctx.userChoice));
+            canvas.printf(isCN ? "你的选择: %s" : "Choice: %s", getDecisionName(ctx.userChoice));
 
             if (ctx.totalPlays > 0) {
                 canvas.setTextColor(DARKGREY, BLACK);
@@ -396,7 +414,7 @@ void renderUI(const UIContext& ctx) {
                 canvas.printf("PLS:%d", ctx.totalPlays);
             }
 
-            drawFooter("[ENTER] NEXT AGAIN  [ESC] HOME");
+            drawFooter(isCN ? "[ENTER] 下一个场景  [ESC] 首页" : "[ENTER] NEXT AGAIN  [ESC] HOME");
             break;
         }
     }

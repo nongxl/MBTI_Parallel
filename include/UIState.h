@@ -43,12 +43,21 @@ enum class MatchType {
     SPLIT
 };
 
+enum class Language {
+    ENGLISH = 0,
+    CHINESE = 1
+};
+
 struct UIContext {
     AppState state;
+    Language lang; // 当前语言设置 (ENGLISH / CHINESE)
+
     UserSelection currentSelection;
     Scenario currentScenario;
     char currentScenarioTitle[32];
     char currentScenarioDesc[80];
+    char currentScenarioTitleCN[32];
+    char currentScenarioDescCN[80];
 
     DecisionResult results[MBTI_COUNT];
     DecisionSummary summary;
