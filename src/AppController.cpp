@@ -23,9 +23,9 @@ static uint32_t millis() { return 0; }
 #undef CHANGE
 #endif
 
-static float cubicEaseOut(float t) {
+static float quinticEaseOut(float t) {
     float f = 1.0f - t;
-    return 1.0f - f * f * f;
+    return 1.0f - f * f * f * f * f;
 }
 
 static void startRadarAnimation(UIContext& ctx, const RadarData& targetData, uint32_t currentMillis) {
@@ -125,17 +125,17 @@ void updateApp(UIContext& ctx, uint32_t currentMillis) {
         }
     }
 
-    // 2. 处理六维雷达极坐标平滑补间形变插值 (300ms Cubic Ease-Out 缓动形变)
+    // 2. 处理六维雷达极坐标平滑补间形变插值 (400ms Quintic Ease-Out 高阶五次方丝滑缓动)
     if (ctx.isRadarAnimActive) {
         uint32_t elapsed = currentMillis - ctx.radarAnimStartTime;
-        float rawT = elapsed / 300.0f; // 300ms 黄金动效时间
+        float rawT = elapsed / 400.0f; // 400ms 极佳动效区间
         if (rawT >= 1.0f) {
             rawT = 1.0f;
             ctx.isRadarAnimActive = false;
         }
 
-        // 应用 Cubic Ease-Out 缓动曲线 (启动迅速，终点减速落脚优雅丝滑)
-        float easeT = cubicEaseOut(rawT);
+        // 应用 Quintic Ease-Out 缓动曲线 (拉伸迅速，后段极其柔顺地慢慢减速停驻)
+        float easeT = quinticEaseOut(rawT);
 
         ctx.currentRadar.risk = ctx.startRadar.risk + (ctx.endRadar.risk - ctx.startRadar.risk) * easeT;
         ctx.currentRadar.novelty = ctx.startRadar.novelty + (ctx.endRadar.novelty - ctx.startRadar.novelty) * easeT;
@@ -325,7 +325,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 } else {
                     ctx.exploreIndex = (ctx.exploreIndex + 1) % 16;
                 }
-                // 启动 300ms 丝滑 Cubic Ease-Out 缓动雷达形变
+                // 启动 400ms 丝滑 Quintic Ease-Out 缓动雷达形变 (从当前时刻 currentRadar 平滑连续流动)
                 const PersonalityProfile& pProf = getMBTIProfile(ctx.results[ctx.exploreIndex].personality);
                 RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
                 startRadarAnimation(ctx, target, now);

@@ -1,12 +1,39 @@
 #include "RadarChart.h"
-
-#ifdef ARDUINO
 #include <cmath>
 
-static const float M_PI_F = 3.14159265358979323846f;
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
-void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, const RadarData& data, uint16_t lineColor, uint16_t fillColor, bool showLabels) {
-    float values[6] = {
+constexpr int RADAR_AXIS_COUNT = 6;
+
+#ifdef ARDUINO
+
+void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, const RadarData& data, uint16_t color, uint16_t gridColor, bool showAxisLabels) {
+    // 1. 绘制 3 层等距六边形网格线
+    for (int r = 1; r <= 3; ++r) {
+        int currentRadius = (radius * r) / 3;
+        int lastX = 0, lastY = 0;
+        for (int i = 0; i < RADAR_AXIS_COUNT; ++i) {
+            float angle = (90.0f - i * 60.0f) * (M_PI / 180.0f);
+            int x = centerX + static_cast<int>(currentRadius * cosf(angle));
+            int y = centerY - static_cast<int>(currentRadius * sinf(angle));
+
+            if (i > 0) {
+                canvas.drawLine(lastX, lastY, x, y, gridColor);
+            }
+            lastX = x;
+            lastY = y;
+        }
+        // 闭合六边形网格
+        float firstAngle = 90.0f * (M_PI / 180.0f);
+        int firstX = centerX + static_cast<int>(currentRadius * cosf(firstAngle));
+        int firstY = centerY - static_cast<int>(currentRadius * sinf(firstAngle));
+        canvas.drawLine(lastX, lastY, firstX, firstY, gridColor);
+    }
+
+    // 2. 绘制 6 条轴线与轴标签 (N, R, PL, PR, L, S)
+    const float values[RADAR_AXIS_COUNT] = {
         data.novelty,
         data.risk,
         data.planning,
@@ -15,64 +42,58 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
         data.social
     };
 
-    const char* labels[6] = { "N", "R", "PL", "PR", "L", "S" };
+    const char* axisLabels[RADAR_AXIS_COUNT] = { "N", "R", "PL", "PR", "L", "S" };
 
-    // 计算 6 个轴位的角度 (以 -90 度为顶点开始)
-    float angles[6];
-    for (int i = 0; i < 6; ++i) {
-        angles[i] = -M_PI_F / 2.0f + i * (M_PI_F / 3.0f);
-    }
+    int dataX[RADAR_AXIS_COUNT];
+    int dataY[RADAR_AXIS_COUNT];
+    int glowX[RADAR_AXIS_COUNT];
+    int glowY[RADAR_AXIS_COUNT];
 
-    // 1. 绘制 3 层同心六边形背景网格
-    for (int level = 1; level <= 3; ++level) {
-        float r = radius * (level / 3.0f);
-        uint16_t gridColor = (level == 3) ? DARKGREY : DARKCYAN;
-        for (int i = 0; i < 6; ++i) {
-            int next = (i + 1) % 6;
-            int x1 = centerX + (int)(r * std::cos(angles[i]));
-            int y1 = centerY + (int)(r * std::sin(angles[i]));
-            int x2 = centerX + (int)(r * std::cos(angles[next]));
-            int y2 = centerY + (int)(r * std::sin(angles[next]));
-            canvas.drawLine(x1, y1, x2, y2, gridColor);
-        }
-    }
+    for (int i = 0; i < RADAR_AXIS_COUNT; ++i) {
+        float angle = (90.0f - i * 60.0f) * (M_PI / 180.0f);
+        int endX = centerX + static_cast<int>(radius * cosf(angle));
+        int endY = centerY - static_cast<int>(radius * sinf(angle));
+        canvas.drawLine(centerX, centerY, endX, endY, gridColor);
 
-    // 2. 绘制 6 条从中心向外射出的轴线
-    for (int i = 0; i < 6; ++i) {
-        int x = centerX + (int)(radius * std::cos(angles[i]));
-        int y = centerY + (int)(radius * std::sin(angles[i]));
-        canvas.drawLine(centerX, centerY, x, y, DARKGREY);
+        // 数据顶点计算 (0 ~ 100 映射至 0 ~ radius)
+        float normVal = values[i] / 100.0f;
+        if (normVal < 0.05f) normVal = 0.05f;
+        if (normVal > 1.0f) normVal = 1.0f;
 
-        // 绘制标签
-        if (showLabels) {
-            int labelX = centerX + (int)((radius + 10) * std::cos(angles[i])) - 4;
-            int labelY = centerY + (int)((radius + 10) * std::sin(angles[i])) - 4;
+        dataX[i] = centerX + static_cast<int>(radius * normVal * cosf(angle));
+        dataY[i] = centerY - static_cast<int>(radius * normVal * sinf(angle));
+
+        // 衬发光线顶点 (微缩 90% 打造内层发光沉淀感)
+        glowX[i] = centerX + static_cast<int>(radius * (normVal * 0.90f) * cosf(angle));
+        glowY[i] = centerY - static_cast<int>(radius * (normVal * 0.90f) * sinf(angle));
+
+        if (showAxisLabels) {
+            int labelX = centerX + static_cast<int>((radius + 9) * cosf(angle));
+            int labelY = centerY - static_cast<int>((radius + 9) * sinf(angle));
             canvas.setTextSize(1);
-            canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(labelX, labelY);
-            canvas.print(labels[i]);
+            canvas.setTextColor(LIGHTGREY, BLACK);
+            canvas.setCursor(labelX - 3, labelY - 4);
+            canvas.print(axisLabels[i]);
         }
     }
 
-    // 3. 计算数据多边形顶点并绘制闭合边线
-    int dataX[6];
-    int dataY[6];
-    for (int i = 0; i < 6; ++i) {
-        float val = values[i];
-        if (val < 5.0f) val = 5.0f; // 保证最小可见度
-        if (val > 100.0f) val = 100.0f;
+    // 3. 双层发光极客雷达连线 (Dual-Layer Cyber Glow Polygon Line)
+    // 3.1 绘制内衬发光多边形线 (深浅交织衬边)
+    uint16_t glowColor = DARKCYAN;
+    if (color == GREEN) glowColor = DARKGREEN;
+    else if (color == RED) glowColor = MAROON;
 
-        float r = radius * (val / 100.0f);
-        dataX[i] = centerX + (int)(r * std::cos(angles[i]));
-        dataY[i] = centerY + (int)(r * std::sin(angles[i]));
+    for (int i = 0; i < RADAR_AXIS_COUNT; ++i) {
+        int nextIdx = (i + 1) % RADAR_AXIS_COUNT;
+        canvas.drawLine(glowX[i], glowY[i], glowX[nextIdx], glowY[nextIdx], glowColor);
     }
 
-    for (int i = 0; i < 6; ++i) {
-        int next = (i + 1) % 6;
-        canvas.drawLine(dataX[i], dataY[i], dataX[next], dataY[next], lineColor);
-        // 加粗边线效果
-        canvas.drawPixel(dataX[i], dataY[i], lineColor);
-        canvas.fillCircle(dataX[i], dataY[i], 2, lineColor);
+    // 3.2 绘制主高亮外连线与顶点加固点
+    for (int i = 0; i < RADAR_AXIS_COUNT; ++i) {
+        int nextIdx = (i + 1) % RADAR_AXIS_COUNT;
+        canvas.drawLine(dataX[i], dataY[i], dataX[nextIdx], dataY[nextIdx], color);
+        canvas.fillCircle(dataX[i], dataY[i], 2, WHITE);
     }
 }
+
 #endif
