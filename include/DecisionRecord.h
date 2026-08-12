@@ -10,6 +10,7 @@ constexpr int MAX_DECISION_RECORDS = 500;
 
 struct DecisionRecordItem {
     char scenarioId[16];
+    char archetypeId[32]; // 【Phase 6B】底层 Archetype 机制标识
     ScenarioCategory category;
     Decision choice;
     DecisionProfile profile;
@@ -28,7 +29,7 @@ struct DecisionRecordStore {
 void initDecisionRecordStore();
 
 // 追加一次决策记录 (追加至内存与 ESP32 NVS)
-void addDecisionRecord(const char* scenarioId, ScenarioCategory category, Decision choice, const DecisionProfile& profile, MBTIType closest, MBTIType biggestDiff);
+void addDecisionRecord(const char* scenarioId, const char* archetypeId, ScenarioCategory category, Decision choice, const DecisionProfile& profile, MBTIType closest, MBTIType biggestDiff);
 
 // 从 ESP32 NVS 加载历史记录
 void loadDecisionRecordsFromNVS();

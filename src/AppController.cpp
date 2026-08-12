@@ -7,6 +7,7 @@
 #include "ScenarioPool.h"
 #include "DecisionRecord.h"
 #include "CategoryPatternEngine.h"
+#include "DecisionArchetype.h"
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -32,8 +33,12 @@ static uint32_t millis() { return 0; }
 
 static ScenarioCategory g_recentCategories[5] = { ScenarioCategory::TRAVEL };
 static int g_recentCatCount = 0;
+static ArchetypeID g_recentArchetypes[8] = { ArchetypeID::LAST_MINUTE_OPPORTUNITY };
+static int g_recentArchetypeCount = 0;
+
 static ScenarioCategory g_currentCategory = ScenarioCategory::TRAVEL;
-static char g_currentScenarioId[16] = "TRAVEL_001";
+static char g_currentScenarioId[24] = "ARC_0001";
+static char g_currentArchetypeId[32] = "LAST_MINUTE_OPPORTUNITY";
 
 static float quinticEaseOut(float t) {
     float f = 1.0f - t;
@@ -139,22 +144,24 @@ static void findBiggestDifferenceMBTI(const UIContext& ctx, MBTIType& outDiffMBT
 }
 
 static void triggerRandomScenario(UIContext& ctx) {
-    const ConcreteScenario& bankScn = getNextBankScenario(g_recentCategories, g_recentCatCount);
-    ctx.currentScenario = bankScn.scenario;
+    // 【Phase 6B】使用 Decision Archetype Engine 动态触发困境场景
+    DynamicScenario dynScn = generateDynamicArchetypeScenario(g_recentArchetypes, g_recentArchetypeCount);
+    ctx.currentScenario = dynScn.scenario;
 
-    snprintf(g_currentScenarioId, sizeof(g_currentScenarioId), "%s", bankScn.id);
-    g_currentCategory = bankScn.category;
+    snprintf(g_currentScenarioId, sizeof(g_currentScenarioId), "%s", dynScn.id);
+    snprintf(g_currentArchetypeId, sizeof(g_currentArchetypeId), "%s", getArchetypeIdString(dynScn.archetype));
+    g_currentCategory = dynScn.category;
 
-    snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", bankScn.titleEN);
-    snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "%s", bankScn.descEN);
-    snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "%s", bankScn.titleCN);
-    snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "%s", bankScn.descCN);
+    snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", dynScn.titleEN);
+    snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "%s", dynScn.descEN);
+    snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "%s", dynScn.titleCN);
+    snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "%s", dynScn.descCN);
 
-    for (int i = 4; i > 0; --i) {
-        g_recentCategories[i] = g_recentCategories[i - 1];
+    for (int i = 7; i > 0; --i) {
+        g_recentArchetypes[i] = g_recentArchetypes[i - 1];
     }
-    g_recentCategories[0] = bankScn.category;
-    if (g_recentCatCount < 5) g_recentCatCount++;
+    g_recentArchetypes[0] = dynScn.archetype;
+    if (g_recentArchetypeCount < 8) g_recentArchetypeCount++;
 }
 
 static void applyCustomScenario(UIContext& ctx) {
@@ -162,6 +169,7 @@ static void applyCustomScenario(UIContext& ctx) {
     ctx.currentScenario = rendered.scenario;
 
     snprintf(g_currentScenarioId, sizeof(g_currentScenarioId), "CUSTOM_001");
+    snprintf(g_currentArchetypeId, sizeof(g_currentArchetypeId), "CUSTOM");
     g_currentCategory = ScenarioCategory::WORK;
 
     snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", rendered.titleEN);
@@ -483,8 +491,8 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 findBiggestDifferenceMBTI(ctx, ctx.biggestDiffMBTI, ctx.biggestDiffDecision);
                 ctx.matchType = determineMatchType(ctx);
 
-                // 【Phase 6 持久化与模式更新】: 记录结构化 DecisionRecord
-                addDecisionRecord(g_currentScenarioId, g_currentCategory, ctx.userChoice, ctx.userProfile, ctx.closestMBTI, ctx.biggestDiffMBTI);
+                // 【Phase 6B 持久化】: 记录结构化 DecisionRecord (带 archetypeId)
+                addDecisionRecord(g_currentScenarioId, g_currentArchetypeId, g_currentCategory, ctx.userChoice, ctx.userProfile, ctx.closestMBTI, ctx.biggestDiffMBTI);
 
                 recordUserDecisionToHistory(ctx.userHistory, ctx.userProfile, ctx.userChoice);
                 ctx.totalPlays = ctx.userHistory.totalPlays;

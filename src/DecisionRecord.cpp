@@ -16,10 +16,11 @@ void initDecisionRecordStore() {
     memset(g_store.items, 0, sizeof(g_store.items));
 }
 
-void addDecisionRecord(const char* scenarioId, ScenarioCategory category, Decision choice, const DecisionProfile& profile, MBTIType closest, MBTIType biggestDiff) {
+void addDecisionRecord(const char* scenarioId, const char* archetypeId, ScenarioCategory category, Decision choice, const DecisionProfile& profile, MBTIType closest, MBTIType biggestDiff) {
     int idx = g_store.headIndex;
 
     snprintf(g_store.items[idx].scenarioId, sizeof(g_store.items[idx].scenarioId), "%s", scenarioId ? scenarioId : "SCN_000");
+    snprintf(g_store.items[idx].archetypeId, sizeof(g_store.items[idx].archetypeId), "%s", archetypeId ? archetypeId : "CUSTOM");
     g_store.items[idx].category = category;
     g_store.items[idx].choice = choice;
     g_store.items[idx].profile = profile;
