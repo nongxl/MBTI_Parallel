@@ -41,9 +41,9 @@ struct AssembledStoryScenario {
     NarrativePatternID patternId;
 
     char titleCN[48];
-    char bodyCN[240];
+    char bodyCN[512]; // 扩增至 512 字节，彻底解决 4 段式文本被截断在“承担，而”的 Bug！
     char titleEN[48];
-    char bodyEN[240];
+    char bodyEN[512];
 
     char choiceA_CN[24];
     char choiceB_CN[24];

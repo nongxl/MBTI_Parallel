@@ -63,9 +63,9 @@ struct UIContext {
     UserSelection currentSelection;
     Scenario currentScenario;
     char currentScenarioTitle[64];
-    char currentScenarioDesc[256];
+    char currentScenarioDesc[512];   // 扩容至 512 字节，接收全量 4 段故事
     char currentScenarioTitleCN[64];
-    char currentScenarioDescCN[256];
+    char currentScenarioDescCN[512]; // 扩容至 512 字节，彻底杜绝文字溢出截断
 
     int previewScrollY; // 场景预览长文本上下滚动偏移量
 
