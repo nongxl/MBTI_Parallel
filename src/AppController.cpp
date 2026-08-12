@@ -8,6 +8,7 @@
 #include "DecisionRecord.h"
 #include "CategoryPatternEngine.h"
 #include "DecisionArchetype.h"
+#include "EventFragment.h"
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -37,7 +38,7 @@ static ArchetypeID g_recentArchetypes[8] = { ArchetypeID::LAST_MINUTE_OPPORTUNIT
 static int g_recentArchetypeCount = 0;
 
 static ScenarioCategory g_currentCategory = ScenarioCategory::TRAVEL;
-static char g_currentScenarioId[24] = "ARC_0001";
+static char g_currentScenarioId[24] = "FST_0001";
 static char g_currentArchetypeId[32] = "LAST_MINUTE_OPPORTUNITY";
 
 static float quinticEaseOut(float t) {
@@ -144,23 +145,25 @@ static void findBiggestDifferenceMBTI(const UIContext& ctx, MBTIType& outDiffMBT
 }
 
 static void triggerRandomScenario(UIContext& ctx) {
-    // 【Phase 6B】使用 Decision Archetype Engine 动态触发困境场景
-    DynamicScenario dynScn = generateDynamicArchetypeScenario(g_recentArchetypes, g_recentArchetypeCount);
-    ctx.currentScenario = dynScn.scenario;
+    // 【Phase 6B: Event Fragment Engine】使用真实生活事件片段管线组装微场景
+    ArchetypeID chosenArch = static_cast<ArchetypeID>(rand() % ARCHETYPE_COUNT);
+    AssembledStoryScenario storyScn = assembleFragmentScenario(chosenArch);
 
-    snprintf(g_currentScenarioId, sizeof(g_currentScenarioId), "%s", dynScn.id);
-    snprintf(g_currentArchetypeId, sizeof(g_currentArchetypeId), "%s", getArchetypeIdString(dynScn.archetype));
-    g_currentCategory = dynScn.category;
+    ctx.currentScenario = storyScn.scenario;
 
-    snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", dynScn.titleEN);
-    snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "%s", dynScn.descEN);
-    snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "%s", dynScn.titleCN);
-    snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "%s", dynScn.descCN);
+    snprintf(g_currentScenarioId, sizeof(g_currentScenarioId), "%s", storyScn.scenarioId);
+    snprintf(g_currentArchetypeId, sizeof(g_currentArchetypeId), "%s", getArchetypeIdString(storyScn.archetype));
+    g_currentCategory = storyScn.category;
+
+    snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", storyScn.titleEN);
+    snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "%s", storyScn.bodyEN);
+    snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "%s", storyScn.titleCN);
+    snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "%s", storyScn.bodyCN);
 
     for (int i = 7; i > 0; --i) {
         g_recentArchetypes[i] = g_recentArchetypes[i - 1];
     }
-    g_recentArchetypes[0] = dynScn.archetype;
+    g_recentArchetypes[0] = storyScn.archetype;
     if (g_recentArchetypeCount < 8) g_recentArchetypeCount++;
 }
 
