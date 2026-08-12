@@ -294,7 +294,6 @@ void renderUI(const UIContext& ctx) {
                 for (int i = 0; i < 6; ++i) items[i] = getTensionName(static_cast<TensionType>(i), isCN);
             }
 
-            // 【彻底去除底框】: 恢复极致干练的纯黑背景与极客发光文字高亮
             for (int i = 0; i < count; ++i) {
                 int col = i % 2;
                 int row = i / 2;
@@ -327,7 +326,6 @@ void renderUI(const UIContext& ctx) {
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
-            // 【1. 标题高亮展示】: X=10 边距，单行 48 字节 (16 汉字) 绝对防截断残缺
             canvas.setTextSize(1);
             canvas.setTextColor(YELLOW, BLACK);
             
@@ -347,7 +345,6 @@ void renderUI(const UIContext& ctx) {
                 titleY += 15;
             }
 
-            // 【2. 正文大字全屏 18px 行高充盈】
             canvas.setTextColor(WHITE, BLACK);
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
@@ -567,7 +564,8 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextColor(CYAN, BLACK);
             canvas.print(isCN ? "依据:" : "Reason:");
 
-            const char* pReason = isCN ? getDecisionReasonCN(res.reason) : res.reason;
+            // 【核心调用】: 传入具体的 MBTIType 与 Decision 动态生成 16 种人格专属的深层心理学依据！
+            const char* pReason = isCN ? getDecisionReasonCN(res.reason, res.personality, res.decision) : res.reason;
             int lineY = 71;
             while (*pReason && lineY <= 116) {
                 char lineBuf[28] = {0};

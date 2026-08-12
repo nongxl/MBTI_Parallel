@@ -39,7 +39,7 @@ void findBiggestSplit(const DecisionResult results[MBTI_COUNT], MBTIType& yesTyp
 const char* getDecisionName(Decision decision);
 const char* getDecisionNameCN(Decision decision);
 
-// 获取 Decision 依据理由的中文翻译
-const char* getDecisionReasonCN(const char* reasonEN);
+// 获取 Decision 依据理由的中文翻译 (具备 16 种 MBTI 个性化心理学依据细化引擎)
+const char* getDecisionReasonCN(const char* reasonEN, MBTIType personality = MBTIType::INTP, Decision decision = Decision::YES);
 
 #endif // DECISION_ENGINE_H
