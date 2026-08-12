@@ -3,109 +3,96 @@
 #include <cstdio>
 #include <cstring>
 
-// ---------------- [高品质生活故事 Event Fragment 数据库] ----------------
+// ---------------- [高质量现实故事 Event Fragment 数据库 (严格 Category 与 Tag 分组)] ----------------
 static const EventFragment g_fragmentBank[] = {
-    // ---- [1. SETUP 前因背景片段] ----
+    // ==== [1. TRAVEL & OPPORTUNITY (旅行/机会组)] ====
     {
-        "SETUP_HOME_WEEKEND_01", FragmentType::SETUP,
+        "SETUP_TRAVEL_REST_01", FragmentType::SETUP,
         "你原本打算这个周末待在家里，把最近一直没空看的那几本书读完。",
         "On Friday night, you planned to spend the weekend relaxing at home reading.",
         { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::SOCIAL_INVITATION, ArchetypeID::OPPORTUNITY_VS_REST }, 3,
-        { "HOME", "WEEKEND", "REST" }, 10, 15
+        { "TRAVEL", "OPPORTUNITY", "REST" }, 10, 15
     },
-    {
-        "SETUP_WORK_OFF_01", FragmentType::SETUP,
-        "下班前10分钟，你正收拾好东西准备准时回家享受夜晚。",
-        "10 minutes before off-work, you packed your bag getting ready to head home.",
-        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::NOW_VS_LATER, ArchetypeID::HELP_VS_BOUNDARY }, 3,
-        { "WORK", "OFF_WORK", "ROUTINE" }, 10, 15
-    },
-    {
-        "SETUP_SAVINGS_PLAN_01", FragmentType::SETUP,
-        "你最近刚为自己下半年的旅游储备制定了严格的预算卡。",
-        "You recently set up a strict budget plan for a future vacation trip.",
-        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::QUALITY_VS_COST, ArchetypeID::DUPLICATE_PURCHASE }, 3,
-        { "BUDGET", "MONEY", "PLAN" }, 10, 15
-    },
-
-    // ---- [2. EVENT 触发小故事片段] ----
     {
         "EVENT_TOKYO_FLIGHT_01", FragmentType::EVENT,
-        "朋友突然发来消息说，他抢到了两张明天去东京的特价机票。",
-        "A friend messages saying he secured two cheap flights to Tokyo for tomorrow.",
+        "周五晚上，朋友突然发消息说抢到了两张明天去东京的特价机票。",
+        "On Friday night, a friend messages saying he secured cheap flights to Tokyo for tomorrow.",
         { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::KNOWN_VS_UNKNOWN, ArchetypeID::OPPORTUNITY_VS_REST }, 3,
-        { "TOKYO", "FLIGHT", "TRAVEL" }, 10, 20
+        { "TRAVEL", "OPPORTUNITY", "FLIGHT" }, 10, 20
     },
     {
-        "EVENT_CONCERT_TICKET_01", FragmentType::EVENT,
-        "很久没见的老同学多买了一张今晚极难买到的前排演唱会门票。",
-        "An old classmate got an extra ticket for a sold-out concert tonight.",
-        { ArchetypeID::SOCIAL_INVITATION, ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::HELP_VS_BOUNDARY }, 3,
-        { "CONCERT", "TICKET", "FRIEND" }, 10, 20
-    },
-    {
-        "EVENT_DISCOUNT_GADGET_01", FragmentType::EVENT,
-        "你关注了两个月的限定款便携设备今天在商场居然限时六折放量。",
-        "The portable gadget you tracked for two months is suddenly 40% off today.",
-        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::QUALITY_VS_COST }, 2,
-        { "DISCOUNT", "GADGET", "SHOPPING" }, 10, 20
-    },
-
-    // ---- [3. CONTEXT 心理背景片段] ----
-    {
-        "CONTEXT_WANT_LONG_TIME_01", FragmentType::CONTEXT,
-        "你其实一直非常想去那个城市体验一次，只是之前总抽不出空。",
-        "You have always wanted to visit that city, but never found the free time.",
-        { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::KNOWN_VS_UNKNOWN }, 2,
-        { "DESIRE", "DREAM", "TRAVEL" }, 10, 10
-    },
-    {
-        "CONTEXT_GOOD_FRIEND_01", FragmentType::CONTEXT,
-        "你们平时关系很要好，但最近几个月因为各自忙碌很少聚在一起了。",
-        "You are close friends, though busy schedules kept you apart for months.",
-        { ArchetypeID::SOCIAL_INVITATION, ArchetypeID::UNEXPECTED_REQUEST }, 2,
-        { "FRIENDSHIP", "BOND", "REUNION" }, 10, 10
-    },
-
-    // ---- [4. CONSTRAINT 现实拉扯片段] ----
-    {
-        "CONSTRAINT_EXPENSE_TOMORROW_01", FragmentType::CONSTRAINT,
+        "CONSTRAINT_TRAVEL_COST_01", FragmentType::CONSTRAINT,
         "不过往返机票费用需要你自己承担，而且明早6点就要准备出发。",
         "However, you must cover your own ticket, and departure is at 6 AM tomorrow.",
         { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::OPPORTUNITY_VS_REST }, 2,
-        { "COST", "MORNING", "TIME_PRESSURE" }, 10, 15
+        { "TRAVEL", "OPPORTUNITY", "TIME_PRESSURE" }, 10, 15
     },
     {
-        "CONSTRAINT_WORK_DEADLINE_01", FragmentType::CONSTRAINT,
-        "但这需要你今晚牺牲至少2小时的私人时间，明早还要早起开会。",
-        "This requires sacrificing 2 hours tonight, with an early morning meeting tomorrow.",
-        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::NOW_VS_LATER }, 2,
-        { "TIME", "OVERTIME", "PRESSURE" }, 10, 15
-    },
-
-    // ---- [5. TWIST 细节转折片段] ----
-    {
-        "TWIST_UNTESTED_PLACE_01", FragmentType::TWIST,
-        "后来你才了解到，朋友其实也是第一次去那个陌生地点，没有任何攻略。",
-        "You then realize your friend has never been there either—zero guidebooks.",
-        { ArchetypeID::KNOWN_VS_UNKNOWN, ArchetypeID::LAST_MINUTE_OPPORTUNITY }, 2,
-        { "UNPLANNED", "UNKNOWN", "RISK" }, 10, 10
-    },
-
-    // ---- [6. DECISION_FRAME 决策提示片段] ----
-    {
-        "DECISION_WILL_YOU_GO_01", FragmentType::DECISION_FRAME,
-        "面对这个突如其来的机会，你会选择出发吗？",
-        "Facing this sudden opportunity, will you pack up and go?",
+        "DECISION_TRAVEL_GO_01", FragmentType::DECISION_FRAME,
+        "面对这个突如其来的旅行机会，你会选择改计划出发吗？",
+        "Facing this sudden travel opportunity, will you pack up and go?",
         { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::KNOWN_VS_UNKNOWN }, 2,
-        { "DECISION", "CHOICE" }, 10, 5
+        { "TRAVEL", "OPPORTUNITY", "CHOICE" }, 10, 5
+    },
+
+    // ==== [2. PURCHASE & MONEY (购物/理财组)] ====
+    {
+        "SETUP_PURCHASE_SAVINGS_01", FragmentType::SETUP,
+        "你最近刚为自己下半年的旅游储备制定了严格的预算攒钱计划。",
+        "You recently set up a strict budget plan for a future vacation trip.",
+        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::QUALITY_VS_COST, ArchetypeID::DUPLICATE_PURCHASE }, 3,
+        { "PURCHASE", "MONEY", "PLAN" }, 10, 15
     },
     {
-        "DECISION_WILL_YOU_BUY_01", FragmentType::DECISION_FRAME,
-        "面对这个难得的折扣，你会选择现在下单吗？",
-        "Faced with this discount, will you buy it now?",
+        "EVENT_GADGET_DISCOUNT_01", FragmentType::EVENT,
+        "你关注了两个月的限定款便携设备今天在商场居然限时六折放量。",
+        "The portable gadget you tracked for two months is suddenly 40% off today.",
+        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::QUALITY_VS_COST }, 2,
+        { "PURCHASE", "MONEY", "GADGET" }, 10, 20
+    },
+    {
+        "CONSTRAINT_PURCHASE_BUDGET_01", FragmentType::CONSTRAINT,
+        "虽然折扣诱人，但买下它意味着你要挪用本月原本计划存下的闲钱。",
+        "Although enticing, buying it means using up your planned monthly savings.",
+        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::QUALITY_VS_COST }, 2,
+        { "PURCHASE", "MONEY", "BUDGET" }, 10, 15
+    },
+    {
+        "DECISION_PURCHASE_BUY_01", FragmentType::DECISION_FRAME,
+        "面对这个难得的限时折扣，你会选择现在下单购买吗？",
+        "Faced with this discount, will you choose to buy it now?",
         { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::DUPLICATE_PURCHASE }, 2,
-        { "BUY", "CHOICE" }, 10, 5
+        { "PURCHASE", "MONEY", "BUY" }, 10, 5
+    },
+
+    // ==== [3. WORK & REQUEST (工作/请求组)] ====
+    {
+        "SETUP_WORK_OFF_01", FragmentType::SETUP,
+        "下班前10分钟，你正收拾好东西准备准时回家享受个人夜晚。",
+        "10 minutes before off-work, you packed your bag getting ready to head home.",
+        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::NOW_VS_LATER, ArchetypeID::HELP_VS_BOUNDARY }, 3,
+        { "WORK", "REQUEST", "TIME" }, 10, 15
+    },
+    {
+        "EVENT_WORK_HELP_01", FragmentType::EVENT,
+        "同事突然抱来一份紧急项目材料，客气地问你能不能帮忙协助核对。",
+        "A coworker brings urgent project materials, politely asking for your help to review.",
+        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
+        { "WORK", "REQUEST", "HELP" }, 10, 20
+    },
+    {
+        "CONSTRAINT_WORK_OVERTIME_01", FragmentType::CONSTRAINT,
+        "但这需要你今晚额外加班至少1.5小时，还会耽误你原本的晚餐约会。",
+        "However, helping out will cost you 1.5 hours of overtime and delay your dinner.",
+        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
+        { "WORK", "REQUEST", "TIME" }, 10, 15
+    },
+    {
+        "DECISION_WORK_HELP_01", FragmentType::DECISION_FRAME,
+        "面对同事的求助，你会选择留下来帮忙吗？",
+        "Facing your coworker's request, will you stay and help?",
+        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
+        { "WORK", "REQUEST", "HELP" }, 10, 5
     }
 };
 
@@ -131,7 +118,7 @@ static void markFragmentUsed(const char* fragId) {
     if (g_recentFragCount < 16) g_recentFragCount++;
 }
 
-static const EventFragment* pickFragment(FragmentType type, ArchetypeID archetype) {
+static const EventFragment* pickFragmentWithTag(FragmentType type, ArchetypeID archetype, const char* requiredTag) {
     const EventFragment* candidates[FRAGMENT_BANK_SIZE];
     int count = 0;
 
@@ -144,16 +131,41 @@ static const EventFragment* pickFragment(FragmentType type, ArchetypeID archetyp
                     break;
                 }
             }
-            if (matchesArch && !isFragmentCoolingDown(g_fragmentBank[i].id)) {
+
+            bool matchesTag = true;
+            if (requiredTag) {
+                matchesTag = false;
+                for (int t = 0; t < 4; ++t) {
+                    if (g_fragmentBank[i].tags[t] && strcmp(g_fragmentBank[i].tags[t], requiredTag) == 0) {
+                        matchesTag = true;
+                        break;
+                    }
+                }
+            }
+
+            if (matchesArch && matchesTag && !isFragmentCoolingDown(g_fragmentBank[i].id)) {
                 candidates[count++] = &g_fragmentBank[i];
             }
         }
     }
 
     if (count == 0) {
+        // Fallback 宽容匹配
         for (int i = 0; i < FRAGMENT_BANK_SIZE; ++i) {
             if (g_fragmentBank[i].type == type) {
-                candidates[count++] = &g_fragmentBank[i];
+                bool matchesTag = true;
+                if (requiredTag) {
+                    matchesTag = false;
+                    for (int t = 0; t < 4; ++t) {
+                        if (g_fragmentBank[i].tags[t] && strcmp(g_fragmentBank[i].tags[t], requiredTag) == 0) {
+                            matchesTag = true;
+                            break;
+                        }
+                    }
+                }
+                if (matchesTag) {
+                    candidates[count++] = &g_fragmentBank[i];
+                }
             }
         }
     }
@@ -175,31 +187,60 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
     story.seed = seed;
     snprintf(story.scenarioId, sizeof(story.scenarioId), "FST_%04X", (unsigned int)(seed & 0xFFFF));
 
-    const EventFragment* setupFrag = pickFragment(FragmentType::SETUP, chosenArchetype);
-    const EventFragment* eventFrag = pickFragment(FragmentType::EVENT, chosenArchetype);
-    const EventFragment* constraintFrag = pickFragment(FragmentType::CONSTRAINT, chosenArchetype);
+    // 根据 Archetype 确定核心领域 Tag（彻底解决购物配机票的荒谬混搭 Bug）
+    const char* categoryTag = "TRAVEL";
+    if (chosenArchetype == ArchetypeID::LIMITED_TIME_PURCHASE || chosenArchetype == ArchetypeID::QUALITY_VS_COST || chosenArchetype == ArchetypeID::DUPLICATE_PURCHASE) {
+        categoryTag = "PURCHASE";
+        story.category = ScenarioCategory::PURCHASE;
+    } else if (chosenArchetype == ArchetypeID::UNEXPECTED_REQUEST || chosenArchetype == ArchetypeID::HELP_VS_BOUNDARY) {
+        categoryTag = "WORK";
+        story.category = ScenarioCategory::WORK;
+    } else {
+        categoryTag = "TRAVEL";
+        story.category = ScenarioCategory::TRAVEL;
+    }
 
-    story.category = ScenarioCategory::TRAVEL;
+    const EventFragment* setupFrag = pickFragmentWithTag(FragmentType::SETUP, chosenArchetype, categoryTag);
+    const EventFragment* eventFrag = pickFragmentWithTag(FragmentType::EVENT, chosenArchetype, categoryTag);
+    const EventFragment* constraintFrag = pickFragmentWithTag(FragmentType::CONSTRAINT, chosenArchetype, categoryTag);
+    const EventFragment* decisionFrag = pickFragmentWithTag(FragmentType::DECISION_FRAME, chosenArchetype, categoryTag);
 
     snprintf(story.titleCN, sizeof(story.titleCN), "现实微场景抉择");
     snprintf(story.titleEN, sizeof(story.titleEN), "REALITY MICRO DECISION");
 
-    // 【连贯极简拼装】: 无硬回车，自然断句拼装
-    snprintf(story.bodyCN, sizeof(story.bodyCN), "%s%s%s",
-             setupFrag ? setupFrag->zh : "你原本打算这个周末待在家里。",
-             eventFrag ? eventFrag->zh : "朋友突然发消息说抢到了机票。",
-             constraintFrag ? constraintFrag->zh : "不过费用需要你自己承担。");
+    // 【100% 完整拼装】: Setup + Event + Constraint + Decision 确保句尾一定有清晰明确的问题！
+    snprintf(story.bodyCN, sizeof(story.bodyCN), "%s%s%s%s",
+             setupFrag ? setupFrag->zh : "",
+             eventFrag ? eventFrag->zh : "",
+             constraintFrag ? constraintFrag->zh : "",
+             decisionFrag ? decisionFrag->zh : "面对这个抉择，你会做出什么选择？");
 
-    snprintf(story.bodyEN, sizeof(story.bodyEN), "%s %s %s",
-             setupFrag ? setupFrag->en : "You planned to spend the weekend relaxing at home.",
-             eventFrag ? eventFrag->en : "A friend messages saying he secured two cheap flights.",
-             constraintFrag ? constraintFrag->en : "However, you must cover your own ticket.");
+    snprintf(story.bodyEN, sizeof(story.bodyEN), "%s %s %s %s",
+             setupFrag ? setupFrag->en : "",
+             eventFrag ? eventFrag->en : "",
+             constraintFrag ? constraintFrag->en : "",
+             decisionFrag ? decisionFrag->en : "Facing this situation, what will you do?");
 
-    snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "果断前往 (GO)");
-    snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "按原计划 (STAY)");
-    snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "ACCEPT & GO");
-    snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "STICK TO PLAN");
+    // 绑定专属行为动词选项
+    if (strcmp(categoryTag, "PURCHASE") == 0) {
+        snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "果断购买 (BUY)");
+        snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "理性克制 (WAIT)");
+        snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "BUY WITH DISCOUNT");
+        snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "PASS & SAVE");
+        story.scenario = { DecisionType::GET, 30.0f, 70.0f, 10.0f, 70.0f, 20.0f, 10.0f, 30.0f, 85.0f, 50.0f };
+    } else if (strcmp(categoryTag, "WORK") == 0) {
+        snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "留下来帮 (HELP)");
+        snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "准时下班 (LEAVE)");
+        snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "STAY & HELP");
+        snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "LEAVE ON TIME");
+        story.scenario = { DecisionType::DO, 20.0f, 40.0f, 80.0f, 70.0f, 90.0f, 70.0f, 30.0f, 60.0f, 80.0f };
+    } else {
+        snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "果断前往 (GO)");
+        snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "按原计划 (STAY)");
+        snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "ACCEPT & GO");
+        snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "STICK TO PLAN");
+        story.scenario = { DecisionType::GO, 75.0f, 60.0f, 60.0f, 90.0f, 60.0f, 50.0f, 85.0f, 85.0f, 40.0f };
+    }
 
-    story.scenario = { DecisionType::GO, 75.0f, 60.0f, 60.0f, 90.0f, 60.0f, 50.0f, 85.0f, 85.0f, 40.0f };
     return story;
 }

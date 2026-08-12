@@ -22,7 +22,7 @@ static int getSafeUTF8Break(const char* str, int maxBytes) {
     int pos = 0;
     while (pos < maxBytes && pos < len) {
         if (str[pos] == '\n') {
-            return pos; // 遇到显式换行符立即打断本行
+            return pos; // 遇到显式换行符指针打断
         }
         unsigned char c = (unsigned char)str[pos];
         int charBytes = 1;
@@ -407,14 +407,11 @@ void renderUI(const UIContext& ctx) {
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             
-            // 【神级修复】精准控制单行最大 57 字节 (19 个汉字，充分填满 228 像素显示宽度，绝不早换行)
-            // 手动过滤与消费 \n 换行符，由外层循环统一严格管理 lineY += 15，彻底解决上下重叠与尾部切除！
             int lineY = 42;
             const char* pDesc = desc;
             int maxLineBytes = isCN ? 57 : 36; // 19 个汉字 = 57 字节 (19 * 12px = 228px，完美占满 240px 屏幕)
 
             while (*pDesc && lineY <= 122) {
-                // 如果遇到显式 \n 换行符，消费掉它并下移一行
                 if (*pDesc == '\n') {
                     pDesc++;
                     lineY += 15;
@@ -439,8 +436,28 @@ void renderUI(const UIContext& ctx) {
 
         case AppState::YOUR_CHOICE: {
             drawHeader(isCN ? "如果是你，你怎么选？" : "WHAT WOULD YOU DO?", isCN);
-            const char* choices[] = { "YES", "NO", "MAYBE" };
-            const char* choicesCN[] = { "同意 (YES)", "拒绝 (NO)", "犹豫 (MAYBE)" };
+            
+            // 【神级体验升级】: 读取场景专属的行为动词选项 (如购物对应“果断购买 / 理性克制”)！
+            const char* choicesCN[] = { "1. 果断行动 (YES)", "2. 保持原状 (NO)", "3. 犹豫观望 (MAYBE)" };
+            const char* choicesEN[] = { "1. YES", "2. NO", "3. MAYBE" };
+
+            if (ctx.currentScenario.type == DecisionType::GET) {
+                choicesCN[0] = "1. 果断购买 (BUY)";
+                choicesCN[1] = "2. 理性克制 (PASS)";
+                choicesEN[0] = "1. BUY NOW";
+                choicesEN[1] = "2. PASS & SAVE";
+            } else if (ctx.currentScenario.type == DecisionType::DO) {
+                choicesCN[0] = "1. 留下来帮 (HELP)";
+                choicesCN[1] = "2. 准时下班 (LEAVE)";
+                choicesEN[0] = "1. STAY & HELP";
+                choicesEN[1] = "2. LEAVE ON TIME";
+            } else if (ctx.currentScenario.type == DecisionType::GO) {
+                choicesCN[0] = "1. 果断前往 (GO)";
+                choicesCN[1] = "2. 按原计划 (STAY)";
+                choicesEN[0] = "1. ACCEPT & GO";
+                choicesEN[1] = "2. STICK TO PLAN";
+            }
+
             for (int i = 0; i < 3; ++i) {
                 if (isCN) {
                     canvas.setFont(&fonts::efontCN_12);
@@ -450,8 +467,8 @@ void renderUI(const UIContext& ctx) {
                     canvas.setTextSize(2);
                 }
 
-                canvas.setCursor(10, 36 + i * 30);
-                const char* txt = isCN ? choicesCN[i] : choices[i];
+                canvas.setCursor(10, 34 + i * 28);
+                const char* txt = isCN ? choicesCN[i] : choicesEN[i];
                 if (i == ctx.selectedMenuIndex) {
                     canvas.setTextColor(GREEN, BLACK);
                     canvas.printf("> %s", txt);
