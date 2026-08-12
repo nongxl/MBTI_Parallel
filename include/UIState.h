@@ -67,6 +67,8 @@ struct UIContext {
     char currentScenarioTitleCN[64];
     char currentScenarioDescCN[256];
 
+    int previewScrollY; // 场景预览长文本上下滚动偏移量
+
     DecisionResult results[MBTI_COUNT];
     DecisionSummary summary;
     MBTIType splitYesType;

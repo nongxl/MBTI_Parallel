@@ -407,14 +407,16 @@ void renderUI(const UIContext& ctx) {
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             
-            int lineY = 42;
+            // 【神级平滑滚动】: 结合 ctx.previewScrollY 渲染任意长度的长故事！
+            int rawLineY = 42 - ctx.previewScrollY;
             const char* pDesc = desc;
-            int maxLineBytes = isCN ? 57 : 36; // 19 个汉字 = 57 字节 (19 * 12px = 228px，完美占满 240px 屏幕)
+            int maxLineBytes = isCN ? 57 : 36;
+            bool hasMoreBelow = false;
 
-            while (*pDesc && lineY <= 122) {
+            while (*pDesc) {
                 if (*pDesc == '\n') {
                     pDesc++;
-                    lineY += 15;
+                    rawLineY += 15;
                     continue;
                 }
 
@@ -425,11 +427,24 @@ void renderUI(const UIContext& ctx) {
                 strncpy(buf, pDesc, takeBytes);
                 buf[takeBytes] = '\0';
 
-                canvas.setCursor(6, lineY);
-                canvas.print(buf);
+                // 只有在屏幕可见视口范围内 [40, 120] 才绘制文本
+                if (rawLineY >= 40 && rawLineY <= 120) {
+                    canvas.setCursor(6, rawLineY);
+                    canvas.print(buf);
+                } else if (rawLineY > 120) {
+                    hasMoreBelow = true;
+                }
 
                 pDesc += takeBytes;
-                lineY += 15;
+                rawLineY += 15;
+            }
+
+            // 绘制滚动提升箭头与操作提示
+            if (hasMoreBelow || ctx.previewScrollY > 0) {
+                canvas.setFont(&fonts::Font0);
+                canvas.setTextColor(CYAN, BLACK);
+                canvas.setCursor(175, 5);
+                canvas.print("[v SCROLL]");
             }
             break;
         }

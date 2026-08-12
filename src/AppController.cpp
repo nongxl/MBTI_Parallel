@@ -102,7 +102,6 @@ static void calculateWhyMatch(UIContext& ctx) {
         diffs[i].diff = fabsf(userVals[i] - mbtiVals[i]);
     }
 
-    // 按差异从小到大排序，挑选最相似的前 3 个维度
     std::sort(diffs, diffs + 6, [](const DimDiff& a, const DimDiff& b) {
         return a.diff < b.diff;
     });
@@ -149,6 +148,7 @@ static void triggerRandomScenario(UIContext& ctx) {
     AssembledStoryScenario storyScn = assembleFragmentScenario(chosenArch);
 
     ctx.currentScenario = storyScn.scenario;
+    ctx.previewScrollY = 0; // 重置长文本滚动偏移量
 
     snprintf(g_currentScenarioId, sizeof(g_currentScenarioId), "%s", storyScn.scenarioId);
     snprintf(g_currentArchetypeId, sizeof(g_currentArchetypeId), "%s", getArchetypeIdString(storyScn.archetype));
@@ -169,6 +169,7 @@ static void triggerRandomScenario(UIContext& ctx) {
 static void applyCustomScenario(UIContext& ctx) {
     RenderedCustomScenario rendered = renderCustomScenario(ctx.customDNA);
     ctx.currentScenario = rendered.scenario;
+    ctx.previewScrollY = 0;
 
     snprintf(g_currentScenarioId, sizeof(g_currentScenarioId), "CUSTOM_001");
     snprintf(g_currentArchetypeId, sizeof(g_currentArchetypeId), "CUSTOM");
@@ -188,6 +189,7 @@ void initApp(UIContext& ctx) {
     ctx.animStartTime = 0;
     ctx.animProgress = 0;
     ctx.dnaHistoryCount = 0;
+    ctx.previewScrollY = 0;
 
     loadDecisionRecordsFromNVS();
 
@@ -462,7 +464,15 @@ void handleInput(UIContext& ctx, KeyInput key) {
         }
 
         case AppState::BUILDER_PREVIEW:
-            if (key == KeyInput::ENTER) {
+            if (key == KeyInput::DOWN) {
+                ctx.previewScrollY += 15;
+            } else if (key == KeyInput::UP) {
+                if (ctx.previewScrollY >= 15) {
+                    ctx.previewScrollY -= 15;
+                } else {
+                    ctx.previewScrollY = 0;
+                }
+            } else if (key == KeyInput::ENTER) {
                 ctx.state = AppState::YOUR_CHOICE;
                 ctx.selectedMenuIndex = 0;
             } else if (key == KeyInput::BACK) {
@@ -536,7 +546,6 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
         case AppState::SUMMARY:
             if (key == KeyInput::ENTER) {
-                // 【核心修正】在 SUMMARY 进入 AppState::EXPLORE 时，固定当前雷达图为用户自己的本题决策 Profile！
                 ctx.state = AppState::EXPLORE;
                 ctx.exploreIndex = static_cast<int>(ctx.closestMBTI);
 
@@ -561,7 +570,6 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 } else {
                     ctx.exploreIndex = (ctx.exploreIndex + 1) % 16;
                 }
-                // 【核心修正】左右切换 16 人格时，用户自己的雷达轮廓（绿线）保持冰冻稳定，绝对不去修改 ctx.currentRadar！
             } else if (key == KeyInput::ENTER) {
                 if (ctx.bootMenuMode == 1) {
                     ctx.state = AppState::BUILDER_WHO;
