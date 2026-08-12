@@ -104,13 +104,25 @@ void renderUI(const UIContext& ctx) {
             
             uint32_t now = millis();
             float t = now / 1000.0f;
-            RadarData homeData = {
+
+            // 【主波长雷达 (绿色分支)】
+            RadarData homeData1 = {
                 72.0f + 18.0f * sinf(t * 1.3f),
                 82.0f + 14.0f * cosf(t * 0.9f + 1.1f),
                 68.0f + 16.0f * sinf(t * 1.6f + 2.2f),
                 78.0f + 15.0f * cosf(t * 1.1f + 3.3f),
                 55.0f + 20.0f * sinf(t * 0.8f + 4.4f),
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
+            };
+
+            // 【差频镜像波长雷达 (霓虹紫色分支)】
+            RadarData homeData2 = {
+                65.0f + 20.0f * cosf(t * 1.1f + 0.8f),
+                75.0f + 16.0f * sinf(t * 1.4f + 2.5f),
+                80.0f + 12.0f * cosf(t * 0.7f + 1.9f),
+                60.0f + 18.0f * sinf(t * 1.5f + 3.7f),
+                82.0f + 15.0f * cosf(t * 1.2f + 4.1f),
+                62.0f + 19.0f * sinf(t * 0.9f + 5.0f)
             };
 
             // 图层 0 (最底层 Layer 0): 亮黄色 PARALLEL 大字
@@ -120,10 +132,10 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(48, 38);
             canvas.print("PARALLEL");
 
-            // 图层 1 & 2: 48px 巨幅雷达 Logo (中心点 120, 55, 统一亮绿色连线 GREEN)
-            drawRadarChart(canvas, 120, 55, 48, homeData, GREEN, DARKCYAN, false, isCN);
+            // 图层 1 & 2 & 3: 48px 巨幅双雷达呼吸交织 Logo (中心点 120, 55, 绿实线 vs 紫实线 + 双色 Alpha + 皇家蓝紫重叠加深)
+            drawDualRadarChart(canvas, 120, 55, 48, homeData1, homeData2, nullptr, false, isCN);
 
-            // 图层 3: 开机三选项贴底排版
+            // 图层 4: 开机三选项贴底排版
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
@@ -454,7 +466,6 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::WHY_MATCH: {
-            // 【Phase 6A 精准排版】: 绝对防出界 X 轴最大到达 224px (屏宽 240px，右侧安全保留 16px)
             char titleBuf[48];
             snprintf(titleBuf, sizeof(titleBuf), isCN ? "为什么更接近 %s？" : "WHY LOOKS LIKE %s?", getMBTIName(ctx.closestMBTI));
             drawHeader(titleBuf, isCN);

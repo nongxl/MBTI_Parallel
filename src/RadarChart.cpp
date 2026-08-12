@@ -213,7 +213,7 @@ void drawDualRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, 
             bool inMbti = pointIn6Gon(x, y, mx, my);
 
             if (inUser && inMbti) {
-                // 【重叠交集加深区】: 渲染深邃浓郁的皇家蓝紫 (Deep Royal Indigo 0x3013 / 0x4815)
+                // 【重叠交集加深区】: 渲染深邃浓郁的皇家蓝紫 (Deep Royal Indigo 0x3013)
                 uint16_t bg = canvas.readPixel(x, y);
                 if (bg == 0) canvas.drawPixel(x, y, 0x3013);
                 else {
@@ -324,21 +324,23 @@ void drawDualRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, 
         }
     }
 
-    // 8. 【图例 Legend 居中】
-    canvas.setFont(&fonts::Font0);
-    canvas.setTextSize(1);
-    
-    // 实线绿线表示 YOU
-    canvas.drawLine(136, 28, 148, 28, GREEN);
-    canvas.fillCircle(142, 28, 2, WHITE);
-    canvas.setTextColor(GREEN, BLACK);
-    canvas.setCursor(152, 25);
-    canvas.print("YOU");
+    // 8. 【图例 Legend (仅在 mbtiName 存在且 drawLabels 为 true 时绘制)】
+    if (drawLabels && mbtiName) {
+        canvas.setFont(&fonts::Font0);
+        canvas.setTextSize(1);
+        
+        // 实线绿线表示 YOU
+        canvas.drawLine(136, 28, 148, 28, GREEN);
+        canvas.fillCircle(142, 28, 2, WHITE);
+        canvas.setTextColor(GREEN, BLACK);
+        canvas.setCursor(152, 25);
+        canvas.print("YOU");
 
-    // 实线紫线表示 MBTI
-    canvas.drawLine(192, 28, 204, 28, mbtiColor);
-    canvas.fillCircle(198, 28, 2, mbtiColor);
-    canvas.setTextColor(mbtiColor, BLACK);
-    canvas.setCursor(208, 25);
-    canvas.print(mbtiName ? mbtiName : "MBTI");
+        // 实线紫线表示 MBTI
+        canvas.drawLine(192, 28, 204, 28, mbtiColor);
+        canvas.fillCircle(198, 28, 2, mbtiColor);
+        canvas.setTextColor(mbtiColor, BLACK);
+        canvas.setCursor(208, 25);
+        canvas.print(mbtiName);
+    }
 }
