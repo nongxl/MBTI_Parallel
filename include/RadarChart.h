@@ -2,22 +2,27 @@
 #define RADAR_CHART_H
 
 #ifdef ARDUINO
-#include <M5Cardputer.h>
+#include <M5GFX.h>
+#else
+class M5Canvas {};
 #endif
+
+#include "Scenario.h"
 #include <cstdint>
 
 struct RadarData {
-    float risk;         // 0 ~ 100
-    float novelty;      // 0 ~ 100
-    float logic;        // 0 ~ 100
-    float social;       // 0 ~ 100
-    float planning;     // 0 ~ 100
-    float practicality; // 0 ~ 100
+    float novelty;
+    float risk;
+    float planning;
+    float practicality;
+    float logic;
+    float social;
 };
 
-#ifdef ARDUINO
-// 在 M5Canvas 上绘制六维极坐标雷达图 (支持越界保护与双语轴标签)
-void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, const RadarData& data, uint16_t lineColor, uint16_t fillColor, bool showLabels = true, bool isCN = false);
-#endif
+// 绘制单多边形雷达图
+void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, const RadarData& data, uint16_t lineColor, uint16_t fillColor, bool drawLabels = true, bool isCN = true);
+
+// 【Phase 6A】绘制双多边形叠加雷达图 (实线 YOU vs 虚线/点阵 MBTI Archetype)
+void drawDualRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, const RadarData& userData, const RadarData& mbtiData, const char* mbtiName, bool drawLabels = true, bool isCN = true);
 
 #endif // RADAR_CHART_H

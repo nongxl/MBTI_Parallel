@@ -392,23 +392,27 @@ void renderUI(const UIContext& ctx) {
         case AppState::YOUR_MATCH: {
             drawHeader(isCN ? "你的决策轮廓" : "YOUR DECISION PROFILE", isCN);
             
-            // 【图层 0 最底层】: Size 4 巨幅 MBTI 发光水印 (坐标 132, 52)
+            const PersonalityProfile& closestProf = getMBTIProfile(ctx.closestMBTI);
+            RadarData mbtiRadar = { closestProf.novelty, closestProf.risk, closestProf.planning, closestProf.practicality, closestProf.logic, closestProf.social };
+
+            // 【Phase 6A】: 图层 0 巨幅 MBTI 水印 (Size 4)
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(4);
             canvas.setCursor(132, 52);
             canvas.print(getMBTIName(ctx.closestMBTI));
 
-            // 【图层 1 & 2】: 半透明雷达图 Overlay
-            drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
+            // 【Phase 6A 核心】: 绘制双多边形叠加雷达图 (实线 YOU 绿 vs 虚线 MBTI 黄)
+            drawDualRadarChart(canvas, 180, 68, 40, ctx.currentRadar, mbtiRadar, getMBTIName(ctx.closestMBTI), true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
+            // 合规文案: "本次决定更像:"
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(6, 28);
-            canvas.print(isCN ? "最像人格:" : "MOST LIKE:");
+            canvas.print(isCN ? "本次决定更像:" : "THIS LOOKS LIKE:");
 
             canvas.setFont(&fonts::Font0);
             canvas.setTextSize(1);
@@ -446,6 +450,52 @@ void renderUI(const UIContext& ctx) {
                 canvas.setCursor(185, 5);
                 canvas.printf("PLS:%d", ctx.totalPlays);
             }
+            break;
+        }
+
+        case AppState::WHY_MATCH: {
+            // 【Phase 6A 新增】: WHY契合维度解析屏 (显示最接近的 3 个维度分值比较)
+            char titleBuf[48];
+            snprintf(titleBuf, sizeof(titleBuf), isCN ? "为什么最接近 %s？" : "WHY LOOKS LIKE %s?", getMBTIName(ctx.closestMBTI));
+            drawHeader(titleBuf, isCN);
+
+            const char* dimNamesCN[6] = { "新鲜感", "风险度", "计划性", "实用性", "逻辑性", "社交性" };
+            const char* dimNamesEN[6] = { "NOVELTY", "RISK", "PLANNING", "PRACTICAL", "LOGIC", "SOCIAL" };
+
+            if (isCN) canvas.setFont(&fonts::efontCN_12);
+            else canvas.setFont(&fonts::Font0);
+
+            for (int k = 0; k < 3; ++k) {
+                int dIdx = ctx.whyMatchDims[k];
+                int yPos = 32 + k * 28;
+                const char* dName = isCN ? dimNamesCN[dIdx] : dimNamesEN[dIdx];
+                float uVal = ctx.whyMatchUserVals[k];
+                float mVal = ctx.whyMatchMbtiVals[k];
+
+                // 维度名称
+                canvas.setTextColor(CYAN, BLACK);
+                canvas.setCursor(8, yPos);
+                canvas.printf("%s", dName);
+
+                // YOU 比较条 (绿色)
+                canvas.setTextColor(GREEN, BLACK);
+                canvas.setCursor(68, yPos);
+                canvas.printf("YOU:%.0f", uVal);
+                int uW = static_cast<int>(50.0f * (uVal / 100.0f));
+                canvas.fillRect(116, yPos + 1, 50, 8, DARKGREY);
+                if (uW > 0) canvas.fillRect(116, yPos + 1, uW, 8, GREEN);
+
+                // MBTI 比较条 (黄色)
+                canvas.setTextColor(YELLOW, BLACK);
+                canvas.setCursor(172, yPos);
+                canvas.printf("%s:%.0f", getMBTIName(ctx.closestMBTI), mVal);
+                int mW = static_cast<int>(50.0f * (mVal / 100.0f));
+                canvas.fillRect(222, yPos + 1, 15, 8, YELLOW);
+            }
+
+            canvas.setTextColor(WHITE, BLACK);
+            canvas.setCursor(8, 114);
+            canvas.print(isCN ? "核心维度极为吻合，呈现高度同频决策风格" : "CORE AXES ALIGNED CLOSELY");
             break;
         }
 
@@ -519,15 +569,18 @@ void renderUI(const UIContext& ctx) {
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle, isCN);
 
-            // 【图层 0 最底层】: Size 4 巨幅 MBTI 4 字母发光水印 (坐标 132, 52)
+            const PersonalityProfile& currentProf = getMBTIProfile(res.personality);
+            RadarData currentMbtiRadar = { currentProf.novelty, currentProf.risk, currentProf.planning, currentProf.practicality, currentProf.logic, currentProf.social };
+
+            // 【Phase 6A 图层 0】: Size 4 巨幅 MBTI 4 字母发光水印
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(4);
             canvas.setCursor(132, 52);
             canvas.print(getMBTIName(res.personality));
 
-            // 【图层 1 & 2】: 半透明雷达图 Overlay 覆盖在 MBTI 四字母上方
-            drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
+            // 【Phase 6A 核心】: 实时渲染 YOU vs 当前浏览 MBTI 双多边形叠加雷达图！
+            drawDualRadarChart(canvas, 180, 68, 40, ctx.currentRadar, currentMbtiRadar, getMBTIName(res.personality), true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
@@ -564,7 +617,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextColor(CYAN, BLACK);
             canvas.print(isCN ? "依据:" : "Reason:");
 
-            // 【核心调用】: 传入具体的 MBTIType 与 Decision 动态生成 16 种人格专属的深层心理学依据！
             const char* pReason = isCN ? getDecisionReasonCN(res.reason, res.personality, res.decision) : res.reason;
             int lineY = 71;
             while (*pReason && lineY <= 116) {

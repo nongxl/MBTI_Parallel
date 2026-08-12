@@ -25,7 +25,8 @@ enum class AppState {
     BIGGEST_SPLIT,
     EXPLORE,
     YOUR_CHOICE,
-    YOUR_MATCH
+    YOUR_MATCH,
+    WHY_MATCH                   // 【Phase 6A】最相似 3 维度契合解析屏
 };
 
 enum class KeyInput {
@@ -80,6 +81,11 @@ struct UIContext {
     MBTIType closestMBTI;
     float matchSimilarity;
     MatchType matchType;
+
+    // 【Phase 6A】WHY_MATCH 解析：契合度最高的 3 个维度索引与具体分值
+    int whyMatchDims[3];       // 0: Novelty, 1: Risk, 2: Planning, 3: Practicality, 4: Logic, 5: Social
+    float whyMatchUserVals[3];
+    float whyMatchMbtiVals[3];
 
     // 本题分歧最大的人格与决策结果
     MBTIType biggestDiffMBTI;

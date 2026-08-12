@@ -53,6 +53,25 @@ static void drawSmoothAlphaTriangle(M5Canvas& canvas, int x0, int y0, int x1, in
     }
 }
 
+// 虚线绘制助手函数
+static void drawDottedLine(M5Canvas& canvas, int x0, int y0, int x1, int y1, uint16_t color) {
+    int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+    int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+    int err = dx + dy, e2;
+    int count = 0;
+
+    while (true) {
+        if ((count / 3) % 2 == 0) {
+            canvas.drawPixel(x0, y0, color);
+        }
+        if (x0 == x1 && y0 == y1) break;
+        e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x0 += sx; }
+        if (e2 <= dx) { err += dx; y0 += sy; }
+        count++;
+    }
+}
+
 void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, const RadarData& data, uint16_t lineColor, uint16_t fillColor, bool drawLabels, bool isCN) {
     float values[6] = {
         data.novelty,
@@ -118,7 +137,7 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
         canvas.fillCircle(vx[i], vy[i], 2, WHITE);
     }
 
-    // 6. 绘制顶点标签 (拉近间距，紧密贴合六边形)
+    // 6. 绘制顶点标签
     if (drawLabels) {
         if (isCN) {
             canvas.setFont(&fonts::efontCN_12);
@@ -131,7 +150,6 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
         canvas.setTextColor(CYAN, BLACK);
         for (int i = 0; i < 6; ++i) {
             float angle = -M_PI / 2.0f + i * (M_PI / 3.0f);
-            // 将外扩距离从 12/14 紧密缩进至 8/10
             int labelDist = radius + (isCN ? 8 : 10);
             int labelX = centerX + static_cast<int>(labelDist * cosf(angle));
             int labelY = centerY + static_cast<int>(labelDist * sinf(angle));
@@ -139,33 +157,83 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
             const char* txt = isCN ? labelsCN[i] : labelsEN[i];
             int textLen = isCN ? (strlen(txt) / 3 * 12) : (strlen(txt) * 6);
 
-            if (i == 0) { // NOVELTY
+            if (i == 0) {
                 labelX -= textLen / 2;
                 labelY -= 9;
-            } else if (i == 1) { // RISK
+            } else if (i == 1) {
                 labelY -= 4;
-            } else if (i == 2) { // PLANNING
+            } else if (i == 2) {
                 labelY += 4;
-            } else if (i == 3) { // PRACTICALITY
+            } else if (i == 3) {
                 labelX -= textLen / 2;
                 labelY += 1;
-            } else if (i == 4) { // LOGIC
+            } else if (i == 4) {
                 labelX -= textLen;
                 labelY += 4;
-            } else if (i == 5) { // SOCIAL
+            } else if (i == 5) {
                 labelX -= textLen;
                 labelY -= 4;
             }
 
-            if (labelX + textLen > 235) {
-                labelX = 235 - textLen;
-            }
-            if (labelX < 2) {
-                labelX = 2;
-            }
+            if (labelX + textLen > 235) labelX = 235 - textLen;
+            if (labelX < 2) labelX = 2;
 
             canvas.setCursor(labelX, labelY);
             canvas.print(txt);
         }
     }
+}
+
+// 【Phase 6A】双雷达叠加多边形绘制实现 (实线 YOU vs 虚线 MBTI)
+void drawDualRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, const RadarData& userData, const RadarData& mbtiData, const char* mbtiName, bool drawLabels, bool isCN) {
+    // 1. 优先绘制背景网格与基础设施 (基于 YOU 绘制背景 Alpha)
+    drawRadarChart(canvas, centerX, centerY, radius, userData, GREEN, DARKCYAN, drawLabels, isCN);
+
+    // 2. 计算 MBTI Archetype 数据顶点
+    float mbtiValues[6] = {
+        mbtiData.novelty,
+        mbtiData.risk,
+        mbtiData.planning,
+        mbtiData.practicality,
+        mbtiData.logic,
+        mbtiData.social
+    };
+
+    int mx[6], my[6];
+    for (int i = 0; i < 6; ++i) {
+        float val = std::min(100.0f, std::max(0.0f, mbtiValues[i]));
+        float r = radius * (val / 100.0f);
+        float angle = -M_PI / 2.0f + i * (M_PI / 3.0f);
+        mx[i] = centerX + static_cast<int>(r * cosf(angle));
+        my[i] = centerY + static_cast<int>(r * sinf(angle));
+    }
+
+    // 3. 【图层 4: 叠加 MBTI 点阵虚线轮廓 (YELLOW)】
+    for (int i = 0; i < 6; ++i) {
+        int next = (i + 1) % 6;
+        drawDottedLine(canvas, mx[i], my[i], mx[next], my[next], YELLOW);
+    }
+
+    // 4. 绘制 MBTI 空心黄色顶点
+    for (int i = 0; i < 6; ++i) {
+        canvas.drawCircle(mx[i], my[i], 3, YELLOW);
+    }
+
+    // 5. 【图层 5: 顶部 Legend 图例打印 (─ YOU   - - MBTI)】
+    canvas.setFont(&fonts::Font0);
+    canvas.setTextSize(1);
+    
+    // 实线绿线表示 YOU
+    canvas.drawLine(135, 122, 147, 122, GREEN);
+    canvas.fillCircle(141, 122, 2, WHITE);
+    canvas.setTextColor(GREEN, BLACK);
+    canvas.setCursor(151, 119);
+    canvas.print("YOU");
+
+    // 虚线黄线表示 MBTI
+    drawDottedLine(canvas, 182, 122, 194, 122, YELLOW);
+    canvas.drawCircle(188, 122, 2, YELLOW);
+    canvas.setTextColor(YELLOW, BLACK);
+    canvas.setCursor(198, 119);
+    canvas.print(mbtiName ? mbtiName : "MBTI");
 }

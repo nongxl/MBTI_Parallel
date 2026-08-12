@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cmath>
+#include <algorithm>
 
 #ifdef ARDUINO
 #include <Arduino.h>
@@ -53,6 +54,51 @@ static MatchType determineMatchType(const UIContext& ctx) {
         return MatchType::SPLIT;
     }
     return MatchType::MATCH;
+}
+
+// 【Phase 6A】计算用户 Profile 与 Closest MBTI 最吻合的 3 个维度
+static void calculateWhyMatch(UIContext& ctx) {
+    const PersonalityProfile& prof = getMBTIProfile(ctx.closestMBTI);
+    
+    float userVals[6] = {
+        ctx.userProfile.novelty,
+        ctx.userProfile.risk,
+        ctx.userProfile.planning,
+        ctx.userProfile.practicality,
+        ctx.userProfile.logic,
+        ctx.userProfile.social
+    };
+
+    float mbtiVals[6] = {
+        prof.novelty,
+        prof.risk,
+        prof.planning,
+        prof.practicality,
+        prof.logic,
+        prof.social
+    };
+
+    struct DimDiff {
+        int index;
+        float diff;
+    } diffs[6];
+
+    for (int i = 0; i < 6; ++i) {
+        diffs[i].index = i;
+        diffs[i].diff = fabsf(userVals[i] - mbtiVals[i]);
+    }
+
+    // 按差异从到大排序，挑选最相似的前 3 个维度
+    std::sort(diffs, diffs + 6, [](const DimDiff& a, const DimDiff& b) {
+        return a.diff < b.diff;
+    });
+
+    for (int k = 0; k < 3; ++k) {
+        int idx = diffs[k].index;
+        ctx.whyMatchDims[k] = idx;
+        ctx.whyMatchUserVals[k] = userVals[idx];
+        ctx.whyMatchMbtiVals[k] = mbtiVals[idx];
+    }
 }
 
 static void findBiggestDifferenceMBTI(const UIContext& ctx, MBTIType& outDiffMBTI, Decision& outDiffDecision) {
@@ -153,6 +199,7 @@ void initApp(UIContext& ctx) {
 
     ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
     ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
+    calculateWhyMatch(ctx);
     ctx.biggestDiffMBTI = MBTIType::ESTJ;
     ctx.biggestDiffDecision = Decision::NO;
     ctx.matchType = MatchType::MATCH;
@@ -416,6 +463,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
                 ctx.userProfile = calculateDecisionProfile(ctx.currentScenario, ctx.userChoice);
                 ctx.closestMBTI = findClosestMBTI(ctx.userProfile, ctx.matchSimilarity);
+                calculateWhyMatch(ctx);
                 findBiggestDifferenceMBTI(ctx, ctx.biggestDiffMBTI, ctx.biggestDiffDecision);
                 ctx.matchType = determineMatchType(ctx);
 
@@ -440,8 +488,8 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
         case AppState::YOUR_MATCH:
             if (key == KeyInput::ENTER) {
-                // 【核心修复】: 按 ENTER 先进入 AppState::SUMMARY (16 人格模拟分支汇总屏)
-                ctx.state = AppState::SUMMARY;
+                // 【Phase 6A】: 按 ENTER 跳转到 AppState::WHY_MATCH 契合维度解析屏
+                ctx.state = AppState::WHY_MATCH;
                 ctx.selectedMenuIndex = 0;
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::HOME;
@@ -449,9 +497,19 @@ void handleInput(UIContext& ctx, KeyInput key) {
             }
             break;
 
+        case AppState::WHY_MATCH:
+            if (key == KeyInput::ENTER) {
+                // 按 ENTER 进入 SUMMARY 16 人格模拟分支汇总屏
+                ctx.state = AppState::SUMMARY;
+                ctx.selectedMenuIndex = 0;
+            } else if (key == KeyInput::BACK) {
+                ctx.state = AppState::YOUR_MATCH;
+            }
+            break;
+
         case AppState::SUMMARY:
             if (key == KeyInput::ENTER) {
-                // 【核心修复】: 在 SUMMARY 按 ENTER 再进入 AppState::EXPLORE (浏览 16 型人格)
+                // 在 SUMMARY 按 ENTER 进入 AppState::EXPLORE 浏览 16 型人格
                 ctx.state = AppState::EXPLORE;
                 ctx.exploreIndex = static_cast<int>(ctx.closestMBTI);
 
@@ -459,7 +517,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
                 startRadarAnimation(ctx, target, now);
             } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::YOUR_MATCH;
+                ctx.state = AppState::WHY_MATCH;
             }
             break;
 
@@ -481,7 +539,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                     ctx.state = AppState::BUILDER_PREVIEW;
                 }
             } else if (key == KeyInput::BACK) {
-                ctx.state = AppState::SUMMARY; // 返回到分支汇总
+                ctx.state = AppState::SUMMARY;
             }
             break;
 
