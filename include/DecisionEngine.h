@@ -35,9 +35,13 @@ DecisionSummary summarizeResults(const DecisionResult results[MBTI_COUNT]);
 // 查找分歧最大的两个人格
 void findBiggestSplit(const DecisionResult results[MBTI_COUNT], MBTIType& yesType, MBTIType& noType);
 
-// 获取决策英文与中文名称
+// 获取决策英文与中文通用名称
 const char* getDecisionName(Decision decision);
 const char* getDecisionNameCN(Decision decision);
+
+// 【Phase 6B 动词匹配升级】根据场景类型 (GET/DO/GO) 获取场景专属的行为动词名称
+const char* getScenarioActionNameCN(Decision decision, DecisionType scenarioType);
+const char* getScenarioActionNameEN(Decision decision, DecisionType scenarioType);
 
 // 【Phase 6B 具象化升级】获取特定 MBTI 针对具体故事因素的考量依据
 const char* getDecisionReasonCN(const char* fallbackReason, MBTIType personality, Decision decision, DecisionType scenarioType = DecisionType::GO);

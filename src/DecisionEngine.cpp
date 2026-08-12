@@ -114,6 +114,52 @@ const char* getDecisionNameCN(Decision decision) {
     return "未知";
 }
 
+const char* getScenarioActionNameCN(Decision decision, DecisionType scenarioType) {
+    if (scenarioType == DecisionType::GET) {
+        switch (decision) {
+            case Decision::YES: return "果断购买";
+            case Decision::NO: return "理性克制";
+            case Decision::MAYBE: return "犹豫观望";
+        }
+    } else if (scenarioType == DecisionType::DO) {
+        switch (decision) {
+            case Decision::YES: return "留下来帮";
+            case Decision::NO: return "准时下班";
+            case Decision::MAYBE: return "犹豫观望";
+        }
+    } else { // GO & OTHER
+        switch (decision) {
+            case Decision::YES: return "果断前往";
+            case Decision::NO: return "按原计划";
+            case Decision::MAYBE: return "犹豫观望";
+        }
+    }
+    return "未知";
+}
+
+const char* getScenarioActionNameEN(Decision decision, DecisionType scenarioType) {
+    if (scenarioType == DecisionType::GET) {
+        switch (decision) {
+            case Decision::YES: return "BUY NOW";
+            case Decision::NO: return "PASS & SAVE";
+            case Decision::MAYBE: return "WAIT & SEE";
+        }
+    } else if (scenarioType == DecisionType::DO) {
+        switch (decision) {
+            case Decision::YES: return "STAY & HELP";
+            case Decision::NO: return "LEAVE ON TIME";
+            case Decision::MAYBE: return "WAIT & SEE";
+        }
+    } else {
+        switch (decision) {
+            case Decision::YES: return "ACCEPT & GO";
+            case Decision::NO: return "STICK TO PLAN";
+            case Decision::MAYBE: return "WAIT & SEE";
+        }
+    }
+    return "UNKNOWN";
+}
+
 const char* getDecisionReasonCN(const char* fallbackReason, MBTIType personality, Decision decision, DecisionType scenarioType) {
     if (scenarioType == DecisionType::GET) { // 购物/理财场景 (如六折便携设备 vs 攒钱预算)
         if (decision == Decision::YES) {

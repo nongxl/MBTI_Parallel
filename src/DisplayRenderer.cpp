@@ -384,7 +384,6 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::BUILDER_PREVIEW: {
-            // 【神级优化 1】: Header 动态展示题目具体类别，替代单调死板的无用主标题！
             const char* catHeaderCN = "场景预览 - 探索抉择";
             const char* catHeaderEN = "PREVIEW - DECISION";
 
@@ -410,7 +409,6 @@ void renderUI(const UIContext& ctx) {
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             
-            // 【神级优化 2】: 删去无用的“现实微场景抉择”行！正文直接从 Y = 26 开始向下铺满视口 (最大化利用全屏 135px 空间)！
             int rawLineY = 26 - ctx.previewScrollY;
             const char* pDesc = desc;
             int maxLineBytes = isCN ? 57 : 36;
@@ -430,7 +428,6 @@ void renderUI(const UIContext& ctx) {
                 strncpy(buf, pDesc, takeBytes);
                 buf[takeBytes] = '\0';
 
-                // 视口放宽为 [25, 130]，一口气容纳 7 行完整短文！
                 if (rawLineY >= 25 && rawLineY <= 130) {
                     canvas.setCursor(6, rawLineY);
                     canvas.print(buf);
@@ -442,7 +439,6 @@ void renderUI(const UIContext& ctx) {
                 rawLineY += 15;
             }
 
-            // 右上角极简滚屏标记 (如有超出部分)
             if (hasMoreBelow || ctx.previewScrollY > 0) {
                 canvas.setFont(&fonts::Font0);
                 canvas.setTextColor(CYAN, BLACK);
@@ -455,7 +451,6 @@ void renderUI(const UIContext& ctx) {
         case AppState::YOUR_CHOICE: {
             drawHeader(isCN ? "如果是你，你怎么选？" : "WHAT WOULD YOU DO?", isCN);
             
-            // 【神级体验升级】: 读取场景专属的行为动词选项 (如购物对应“果断购买 / 理性克制”)！
             const char* choicesCN[] = { "1. 果断行动 (YES)", "2. 保持原状 (NO)", "3. 犹豫观望 (MAYBE)" };
             const char* choicesEN[] = { "1. YES", "2. NO", "3. MAYBE" };
 
@@ -504,20 +499,17 @@ void renderUI(const UIContext& ctx) {
             const PersonalityProfile& closestProf = getMBTIProfile(ctx.closestMBTI);
             RadarData mbtiRadar = { closestProf.novelty, closestProf.risk, closestProf.planning, closestProf.practicality, closestProf.logic, closestProf.social };
 
-            // 【Phase 6A】: 图层 0 巨幅 MBTI 水印 (Size 4)
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(4);
             canvas.setCursor(132, 52);
             canvas.print(getMBTIName(ctx.closestMBTI));
 
-            // 【Phase 6A 核心】: 绘制双多边形叠加雷达图 (实线 YOU 绿 vs 虚线 MBTI 紫)
             drawDualRadarChart(canvas, 180, 68, 40, ctx.currentRadar, mbtiRadar, getMBTIName(ctx.closestMBTI), true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
-            // 合规文案: "本次决定更像:"
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(6, 28);
@@ -537,20 +529,29 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 62);
             canvas.print(isCN ? "最大分歧:" : "BIGGEST DIFF:");
 
-            canvas.setFont(&fonts::Font0);
-            canvas.setTextSize(1);
-            canvas.setTextColor(RED, BLACK);
+            // 【彻底修复 Bug 2】: 在中文字体库下正确渲染括号内部的具体行为动词！绝对不留空白！
             canvas.setCursor(6, 76);
-            const char* diffDecTxt = isCN ? getDecisionNameCN(ctx.biggestDiffDecision) : getDecisionName(ctx.biggestDiffDecision);
-            canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
+            canvas.setTextColor(RED, BLACK);
+            const char* diffDecTxt = isCN ? getScenarioActionNameCN(ctx.biggestDiffDecision, ctx.currentScenario.type)
+                                          : getScenarioActionNameEN(ctx.biggestDiffDecision, ctx.currentScenario.type);
+            
+            if (isCN) {
+                canvas.setFont(&fonts::efontCN_12);
+                canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
+            } else {
+                canvas.setFont(&fonts::Font0);
+                canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
+            }
 
+            // 【彻底修复 Bug 1】: 你的选择同步咬合场景专属动词 (如“果断前往”、“果断购买”)！
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
             canvas.setTextSize(1);
             canvas.setTextColor(CYAN, BLACK);
             canvas.setCursor(6, 98);
-            const char* myDecTxt = isCN ? getDecisionNameCN(ctx.userChoice) : getDecisionName(ctx.userChoice);
+            const char* myDecTxt = isCN ? getScenarioActionNameCN(ctx.userChoice, ctx.currentScenario.type)
+                                        : getScenarioActionNameEN(ctx.userChoice, ctx.currentScenario.type);
             canvas.printf(isCN ? "你的选择: %s" : "YOURS: %s", myDecTxt);
 
             if (ctx.totalPlays > 0) {
@@ -570,17 +571,14 @@ void renderUI(const UIContext& ctx) {
             const PersonalityProfile& closestProf = getMBTIProfile(ctx.closestMBTI);
             RadarData mbtiRadar = { closestProf.novelty, closestProf.risk, closestProf.planning, closestProf.practicality, closestProf.logic, closestProf.social };
 
-            // 【右侧图层 0】: Size 4 巨幅 MBTI 发光水印 (坐标 132, 52)
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(4);
             canvas.setCursor(132, 52);
             canvas.print(getMBTIName(ctx.closestMBTI));
 
-            // 【右侧图层 1 & 2】: 双雷达多边形叠加 (中心 180, 68, 半径 40, 带有图例与完整物理混色)
             drawDualRadarChart(canvas, 180, 68, 40, ctx.currentRadar, mbtiRadar, getMBTIName(ctx.closestMBTI), true, isCN);
 
-            // 【左侧图层 3】: 最吻合 3 维度数值解析 (X = 6 ~ 115)
             const char* dimNamesCN[6] = { "新鲜感", "风险度", "计划性", "实用性", "逻辑性", "社交性" };
             const char* dimNamesEN[6] = { "NOVELTY", "RISK", "PLANNING", "PRACTICAL", "LOGIC", "SOCIAL" };
 
@@ -637,7 +635,6 @@ void renderUI(const UIContext& ctx) {
             float noPct = (ctx.summary.noCount * 100.0f) / 16.0f;
             float maybePct = (ctx.summary.maybeCount * 100.0f) / 16.0f;
 
-            // 1. 同意 (YES) 柱状统计 (Y = 34)
             canvas.setCursor(6, 34);
             canvas.setTextColor(GREEN, BLACK);
             canvas.printf(isCN ? "同意 %d人" : "YES %d", ctx.summary.yesCount);
@@ -647,7 +644,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(206, 34);
             canvas.printf("%.0f%%", yesPct);
 
-            // 2. 拒绝 (NO) 柱状统计 (Y = 60)
             canvas.setCursor(6, 60);
             canvas.setTextColor(RED, BLACK);
             canvas.printf(isCN ? "拒绝 %d人" : "NO  %d", ctx.summary.noCount);
@@ -657,7 +653,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(206, 60);
             canvas.printf("%.0f%%", noPct);
 
-            // 3. 犹豫 (MAYBE) 柱状统计 (Y = 86)
             canvas.setCursor(6, 86);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.printf(isCN ? "犹豫 %d人" : "MAY %d", ctx.summary.maybeCount);
@@ -667,7 +662,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(206, 86);
             canvas.printf("%.0f%%", maybePct);
 
-            // 4. 阵营分布结论概览 (Y = 110)
             canvas.setCursor(6, 110);
             canvas.setTextColor(CYAN, BLACK);
 
@@ -700,14 +694,12 @@ void renderUI(const UIContext& ctx) {
             const PersonalityProfile& currentProf = getMBTIProfile(res.personality);
             RadarData currentMbtiRadar = { currentProf.novelty, currentProf.risk, currentProf.planning, currentProf.practicality, currentProf.logic, currentProf.social };
 
-            // 【Phase 6A 图层 0】: Size 4 巨幅 MBTI 4 字母发光水印
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(4);
             canvas.setCursor(132, 52);
             canvas.print(getMBTIName(res.personality));
 
-            // 【Phase 6A 核心】: 实时渲染 YOU vs 当前浏览 MBTI 双多边形叠加雷达图！
             drawDualRadarChart(canvas, 180, 68, 40, ctx.currentRadar, currentMbtiRadar, getMBTIName(res.personality), true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -718,12 +710,14 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 26);
             canvas.print(isCN ? "选择: " : "Choice: ");
 
-            const char* decName = isCN ? getDecisionNameCN(res.decision) : getDecisionName(res.decision);
+            // 【动词咬合升级】: 在 EXPLORE 屏输出该 MBTI 人格针对本题的具体行为动词！
+            const char* decName = isCN ? getScenarioActionNameCN(res.decision, ctx.currentScenario.type)
+                                       : getScenarioActionNameEN(res.decision, ctx.currentScenario.type);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
-            canvas.setTextSize(isCN ? 1 : 2);
+            canvas.setTextSize(1);
             if (res.decision == Decision::YES) {
                 canvas.setTextColor(GREEN, BLACK);
             } else if (res.decision == Decision::NO) {
@@ -745,7 +739,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextColor(CYAN, BLACK);
             canvas.print(isCN ? "依据:" : "Reason:");
 
-            // 【神级体验升级】传入 ctx.currentScenario.type 绑定故事中的特定抉择因素（如机票自理、限时六折等）
             const char* pReason = isCN ? getDecisionReasonCN(res.reason, res.personality, res.decision, ctx.currentScenario.type) : res.reason;
             int lineY = 71;
             while (*pReason && lineY <= 116) {
