@@ -384,31 +384,34 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::BUILDER_PREVIEW: {
-            drawHeader(isCN ? "场景预览" : "SCENARIO PREVIEW", isCN);
+            // 【神级优化 1】: Header 动态展示题目具体类别，替代单调死板的无用主标题！
+            const char* catHeaderCN = "场景预览 - 探索抉择";
+            const char* catHeaderEN = "PREVIEW - DECISION";
+
+            if (ctx.currentScenario.type == DecisionType::GET) {
+                catHeaderCN = "场景预览 - 购物与理财";
+                catHeaderEN = "PREVIEW - PURCHASE";
+            } else if (ctx.currentScenario.type == DecisionType::DO) {
+                catHeaderCN = "场景预览 - 职场与协作";
+                catHeaderEN = "PREVIEW - WORK";
+            } else if (ctx.currentScenario.type == DecisionType::GO) {
+                catHeaderCN = "场景预览 - 旅行与探险";
+                catHeaderEN = "PREVIEW - TRAVEL";
+            }
+
+            drawHeader(isCN ? catHeaderCN : catHeaderEN, isCN);
             
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
             canvas.setTextSize(1);
-            canvas.setTextColor(YELLOW, BLACK);
-            
-            const char* titleTxt = isCN ? (ctx.currentScenarioTitleCN[0] ? ctx.currentScenarioTitleCN : "离线情境")
-                                        : (ctx.currentScenarioTitle[0] ? ctx.currentScenarioTitle : "SCENARIO");
-            
-            // 绘制标题大字
-            canvas.setCursor(6, 25);
-            char tBuf[64] = {0};
-            int tBytes = getSafeUTF8Break(titleTxt, isCN ? 57 : 36);
-            strncpy(tBuf, titleTxt, tBytes);
-            tBuf[tBytes] = '\0';
-            canvas.print(tBuf);
-
             canvas.setTextColor(WHITE, BLACK);
+            
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             
-            // 【神级平滑滚动】: 结合 ctx.previewScrollY 渲染任意长度的长故事！
-            int rawLineY = 42 - ctx.previewScrollY;
+            // 【神级优化 2】: 删去无用的“现实微场景抉择”行！正文直接从 Y = 26 开始向下铺满视口 (最大化利用全屏 135px 空间)！
+            int rawLineY = 26 - ctx.previewScrollY;
             const char* pDesc = desc;
             int maxLineBytes = isCN ? 57 : 36;
             bool hasMoreBelow = false;
@@ -427,11 +430,11 @@ void renderUI(const UIContext& ctx) {
                 strncpy(buf, pDesc, takeBytes);
                 buf[takeBytes] = '\0';
 
-                // 只有在屏幕可见视口范围内 [40, 120] 才绘制文本
-                if (rawLineY >= 40 && rawLineY <= 120) {
+                // 视口放宽为 [25, 130]，一口气容纳 7 行完整短文！
+                if (rawLineY >= 25 && rawLineY <= 130) {
                     canvas.setCursor(6, rawLineY);
                     canvas.print(buf);
-                } else if (rawLineY > 120) {
+                } else if (rawLineY > 130) {
                     hasMoreBelow = true;
                 }
 
@@ -439,7 +442,7 @@ void renderUI(const UIContext& ctx) {
                 rawLineY += 15;
             }
 
-            // 绘制滚动提升箭头与操作提示
+            // 右上角极简滚屏标记 (如有超出部分)
             if (hasMoreBelow || ctx.previewScrollY > 0) {
                 canvas.setFont(&fonts::Font0);
                 canvas.setTextColor(CYAN, BLACK);
