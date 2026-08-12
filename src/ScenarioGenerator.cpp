@@ -273,7 +273,7 @@ GeneratedScenario generateProceduralScenario(const ScenarioDNA recentDNAs[10], i
         sc.time = (float)candidateDNA.timePressure;
         sc.cost = (float)candidateDNA.financialImpact;
         sc.effort = 40.0f;
-        sc.emotionalValue = (candidateDNA.category == ScenarioCategory::EXPERIENCE || candidateDNA.category == ScenarioCategory::COMFORT) ? 85.0f : 40.0f;
+        sc.emotionalValue = (candidateDNA.category == ScenarioCategory::ADVENTURE || candidateDNA.category == ScenarioCategory::COMFORT) ? 85.0f : 40.0f;
         sc.practicalValue = (candidateDNA.category == ScenarioCategory::MONEY || candidateDNA.category == ScenarioCategory::TIME) ? 85.0f : 35.0f;
 
         // 1. 评估 Diversity Score

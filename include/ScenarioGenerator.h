@@ -13,21 +13,7 @@
 
 #include <cstdint>
 #include "Scenario.h"
-
-enum class ScenarioCategory {
-    SOCIAL = 0,
-    MONEY,
-    EXPERIENCE,
-    RISK,
-    CHANGE,
-    CREATIVITY,
-    TIME,
-    UNCERTAINTY,
-    OPPORTUNITY,
-    COMFORT,
-    RELATIONSHIP,
-    SELF
-};
+#include "ScenarioPool.h"
 
 enum class DecisionConflict {
     SAFETY_VS_NOVELTY = 0,

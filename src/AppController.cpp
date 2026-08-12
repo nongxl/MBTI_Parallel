@@ -4,6 +4,9 @@
 #include "DecisionProfile.h"
 #include "ScenarioGenerator.h"
 #include "ScenarioBuilder.h"
+#include "ScenarioPool.h"
+#include "DecisionRecord.h"
+#include "CategoryPatternEngine.h"
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -26,6 +29,11 @@ static uint32_t millis() { return 0; }
 #ifdef CHANGE
 #undef CHANGE
 #endif
+
+static ScenarioCategory g_recentCategories[5] = { ScenarioCategory::TRAVEL };
+static int g_recentCatCount = 0;
+static ScenarioCategory g_currentCategory = ScenarioCategory::TRAVEL;
+static char g_currentScenarioId[16] = "TRAVEL_001";
 
 static float quinticEaseOut(float t) {
     float f = 1.0f - t;
@@ -131,25 +139,31 @@ static void findBiggestDifferenceMBTI(const UIContext& ctx, MBTIType& outDiffMBT
 }
 
 static void triggerRandomScenario(UIContext& ctx) {
-    GeneratedScenario gen = generateProceduralScenario(ctx.recentDNAs, ctx.dnaHistoryCount);
-    ctx.currentScenario = gen.scenario;
-    snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", gen.title);
-    snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "%s", gen.description);
-    snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "%s", gen.titleCN);
-    snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "%s", gen.descriptionCN);
+    const ConcreteScenario& bankScn = getNextBankScenario(g_recentCategories, g_recentCatCount);
+    ctx.currentScenario = bankScn.scenario;
 
-    for (int i = RECENT_DNA_HISTORY_SIZE - 1; i > 0; --i) {
-        ctx.recentDNAs[i] = ctx.recentDNAs[i - 1];
+    snprintf(g_currentScenarioId, sizeof(g_currentScenarioId), "%s", bankScn.id);
+    g_currentCategory = bankScn.category;
+
+    snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", bankScn.titleEN);
+    snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "%s", bankScn.descEN);
+    snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "%s", bankScn.titleCN);
+    snprintf(ctx.currentScenarioDescCN, sizeof(ctx.currentScenarioDescCN), "%s", bankScn.descCN);
+
+    for (int i = 4; i > 0; --i) {
+        g_recentCategories[i] = g_recentCategories[i - 1];
     }
-    ctx.recentDNAs[0] = gen.dna;
-    if (ctx.dnaHistoryCount < RECENT_DNA_HISTORY_SIZE) {
-        ctx.dnaHistoryCount++;
-    }
+    g_recentCategories[0] = bankScn.category;
+    if (g_recentCatCount < 5) g_recentCatCount++;
 }
 
 static void applyCustomScenario(UIContext& ctx) {
     RenderedCustomScenario rendered = renderCustomScenario(ctx.customDNA);
     ctx.currentScenario = rendered.scenario;
+
+    snprintf(g_currentScenarioId, sizeof(g_currentScenarioId), "CUSTOM_001");
+    g_currentCategory = ScenarioCategory::WORK;
+
     snprintf(ctx.currentScenarioTitle, sizeof(ctx.currentScenarioTitle), "%s", rendered.titleEN);
     snprintf(ctx.currentScenarioDesc, sizeof(ctx.currentScenarioDesc), "%s", rendered.descEN);
     snprintf(ctx.currentScenarioTitleCN, sizeof(ctx.currentScenarioTitleCN), "%s", rendered.titleCN);
@@ -164,6 +178,8 @@ void initApp(UIContext& ctx) {
     ctx.animStartTime = 0;
     ctx.animProgress = 0;
     ctx.dnaHistoryCount = 0;
+
+    loadDecisionRecordsFromNVS();
 
 #ifdef ARDUINO
     prefs.begin("mbti_config", false);
@@ -466,6 +482,9 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 calculateWhyMatch(ctx);
                 findBiggestDifferenceMBTI(ctx, ctx.biggestDiffMBTI, ctx.biggestDiffDecision);
                 ctx.matchType = determineMatchType(ctx);
+
+                // 【Phase 6 持久化与模式更新】: 记录结构化 DecisionRecord
+                addDecisionRecord(g_currentScenarioId, g_currentCategory, ctx.userChoice, ctx.userProfile, ctx.closestMBTI, ctx.biggestDiffMBTI);
 
                 recordUserDecisionToHistory(ctx.userHistory, ctx.userProfile, ctx.userChoice);
                 ctx.totalPlays = ctx.userHistory.totalPlays;

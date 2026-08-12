@@ -1,6 +1,8 @@
 #include "DisplayRenderer.h"
 #include "RadarChart.h"
 #include "ScenarioBuilder.h"
+#include "DecisionRecord.h"
+#include "CategoryPatternEngine.h"
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -228,26 +230,74 @@ void renderUI(const UIContext& ctx) {
             // 【图层 1 & 2】: 半透明雷达图 Overlay
             drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
+            // 【Phase 6 核心】: 实时计算 12 大生活领域跨情境模式
+            ContextualPersonalitySummary patternSummary = computeContextualPatterns(getDecisionRecordStore());
+
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
             canvas.setTextSize(1);
-            canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(6, 28);
-            canvas.print(isCN ? "收敛真实人格:" : "LONG-TERM MBTI:");
 
-            canvas.setTextColor(CYAN, BLACK);
-            canvas.setCursor(6, 48);
-            canvas.printf(isCN ? "置信度: %.1f%%" : "Confid : %.1f%%", ctx.userHistory.dominantSimilarity);
+            if (patternSummary.validPatternsCount > 0) {
+                canvas.setTextColor(CYAN, BLACK);
+                canvas.setCursor(6, 26);
+                canvas.print(isCN ? "跨情境模式发现:" : "CONTEXTUAL PATTERNS:");
 
-            canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(6, 68);
-            canvas.printf(isCN ? "已测场数: %d 场" : "Tested : %d", ctx.userHistory.totalPlays);
+                int printed = 0;
+                for (int cat = 0; cat < 12 && printed < 3; ++cat) {
+                    const CategoryPattern& pat = patternSummary.patterns[cat];
+                    if (pat.confidence == PatternConfidence::MEDIUM || pat.confidence == PatternConfidence::HIGH) {
+                        int yPos = 44 + printed * 18;
+                        const char* catName = isCN ? getCategoryNameCN(pat.category) : getCategoryNameEN(pat.category);
 
-            canvas.setTextColor(0x7BEF, BLACK);
-            canvas.setCursor(6, 88);
-            canvas.printf(isCN ? "同意%d 拒绝%d 犹豫%d" : "Y:%d N:%d M:%d",
-                          ctx.userHistory.yesCount, ctx.userHistory.noCount, ctx.userHistory.maybeCount);
+                        if (isCN) canvas.setFont(&fonts::efontCN_12);
+                        else canvas.setFont(&fonts::Font0);
+
+                        canvas.setTextColor(WHITE, BLACK);
+                        canvas.setCursor(6, yPos);
+                        canvas.printf("%.6s", catName);
+
+                        canvas.setFont(&fonts::Font0);
+                        canvas.setTextColor(YELLOW, BLACK);
+                        canvas.setCursor(62, yPos + 1);
+                        canvas.printf("%s", getMBTIName(pat.dominantMBTI));
+
+                        if (isCN) canvas.setFont(&fonts::efontCN_12);
+                        else canvas.setFont(&fonts::Font0);
+
+                        canvas.setTextColor(pat.confidence == PatternConfidence::HIGH ? GREEN : 0x7BEF, BLACK);
+                        canvas.setCursor(96, yPos);
+                        canvas.printf("%s", isCN ? getConfidenceTextCN(pat.confidence) : getConfidenceTextEN(pat.confidence));
+
+                        printed++;
+                    }
+                }
+
+                canvas.setCursor(6, 114);
+                canvas.setTextColor(0x7BEF, BLACK);
+                canvas.print(isCN ? "情境决策呈现不同倾向" : "PATTERNS VARY BY CONTEXT");
+            } else {
+                canvas.setTextColor(WHITE, BLACK);
+                canvas.setCursor(6, 28);
+                canvas.print(isCN ? "收敛真实人格:" : "LONG-TERM MBTI:");
+
+                canvas.setTextColor(CYAN, BLACK);
+                canvas.setCursor(6, 48);
+                canvas.printf(isCN ? "置信度: %.1f%%" : "Confid : %.1f%%", ctx.userHistory.dominantSimilarity);
+
+                canvas.setTextColor(WHITE, BLACK);
+                canvas.setCursor(6, 68);
+                canvas.printf(isCN ? "已测场数: %d 场" : "Tested : %d", ctx.userHistory.totalPlays);
+
+                canvas.setTextColor(0x7BEF, BLACK);
+                canvas.setCursor(6, 88);
+                canvas.printf(isCN ? "同意%d 拒绝%d 犹豫%d" : "Y:%d N:%d M:%d",
+                              ctx.userHistory.yesCount, ctx.userHistory.noCount, ctx.userHistory.maybeCount);
+
+                canvas.setCursor(6, 114);
+                canvas.setTextColor(0x7BEF, BLACK);
+                canvas.print(isCN ? "多玩几场可解锁情境模式" : "PLAY MORE TO UNLOCK PATTERNS");
+            }
             break;
         }
 
