@@ -9,16 +9,16 @@
 #include "DecisionProfile.h"
 #include "RadarChart.h"
 #include "ScenarioGenerator.h"
+#include "CustomBuilder.h"
 
 enum class AppState {
     LANGUAGE_SELECT,            // 首次开机语言选择屏
     HOME,
     MY_PROFILE,                 // 真实长效 MBTI 人格画像看板
     MY_PROFILE_CLEAR_CONFIRM,   // 清空历史确认二次弹窗屏
-    BUILDER_WHO,                // Step 1: WHO
-    BUILDER_SITUATION,          // Step 2: SITUATION
-    BUILDER_CONDITION,          // Step 3: CONDITION
-    BUILDER_TENSION,            // Step 4: TENSION
+    BUILDER_INTENT,             // Step 1: 决策意图 (我该不该买/去/答应？)
+    BUILDER_CONTEXT,            // Step 2: 关联对象 (朋友/同事/旧设备)
+    BUILDER_TENSION,            // Step 3: 犹豫痛点 (耽误原计划/不好拒绝/旧的还能用)
     BUILDER_PREVIEW,
     SIMULATING,
     SUMMARY,
@@ -57,15 +57,18 @@ struct UIContext {
     int bootMenuMode;   // 开机选框模式: 0 (随机模式 RANDOM), 1 (自定义模式 CREATE), 2 (真实人格 MY_PROFILE)
     bool isFirstLaunch; // 标记是否为首次烧录/未配置语言
 
-    // 自定义决策场景 4 步 DNA
+    // Phase 6E 极简 3 步 Custom Decision State
+    CustomDecisionState customDecision;
+
+    // 自定义决策场景 4 步 DNA (兼容)
     CustomScenarioDNA customDNA;
 
     UserSelection currentSelection;
     Scenario currentScenario;
     char currentScenarioTitle[64];
-    char currentScenarioDesc[512];   // 扩容至 512 字节，接收全量 4 段故事
+    char currentScenarioDesc[512];   // 512 字节全量 4 段故事
     char currentScenarioTitleCN[64];
-    char currentScenarioDescCN[512]; // 扩容至 512 字节，彻底杜绝文字溢出截断
+    char currentScenarioDescCN[512]; // 512 字节彻底杜绝溢出截断
 
     int previewScrollY; // 场景预览长文本上下滚动偏移量
 

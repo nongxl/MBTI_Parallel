@@ -3,6 +3,7 @@
 #include "ScenarioBuilder.h"
 #include "DecisionRecord.h"
 #include "CategoryPatternEngine.h"
+#include "CustomBuilder.h"
 #include <cstdio>
 #include <cstring>
 #include <cmath>
@@ -28,7 +29,7 @@ static int getSafeUTF8Break(const char* str, int maxBytes) {
         int charBytes = 1;
         if ((c & 0x80) == 0) charBytes = 1;
         else if ((c & 0xE0) == 0xC0) charBytes = 2;
-        else if ((c & 0xF0) == 0xE0) charBytes = 3;
+        else if ((c & 0xE0) == 0xE0) charBytes = 3;
         else if ((c & 0xF8) == 0xF0) charBytes = 4;
 
         if (pos + charBytes > maxBytes) break;
@@ -108,7 +109,6 @@ void renderUI(const UIContext& ctx) {
             uint32_t now = millis();
             float t = now / 1000.0f;
 
-            // 【主波长雷达 (绿色分支)】
             RadarData homeData1 = {
                 72.0f + 18.0f * sinf(t * 1.3f),
                 82.0f + 14.0f * cosf(t * 0.9f + 1.1f),
@@ -118,7 +118,6 @@ void renderUI(const UIContext& ctx) {
                 74.0f + 16.0f * cosf(t * 1.4f + 5.5f)
             };
 
-            // 【差频镜像波长雷达 (霓虹紫色分支)】
             RadarData homeData2 = {
                 65.0f + 20.0f * cosf(t * 1.1f + 0.8f),
                 75.0f + 16.0f * sinf(t * 1.4f + 2.5f),
@@ -128,17 +127,14 @@ void renderUI(const UIContext& ctx) {
                 62.0f + 19.0f * sinf(t * 0.9f + 5.0f)
             };
 
-            // 图层 0 (最底层 Layer 0): 亮黄色 PARALLEL 大字
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(3);
             canvas.setCursor(48, 38);
             canvas.print("PARALLEL");
 
-            // 图层 1 & 2 & 3: 48px 巨幅双雷达呼吸交织 Logo (中心点 120, 55, 绿实线 vs 紫实线 + 双色 Alpha + 皇家蓝紫重叠加深)
             drawDualRadarChart(canvas, 120, 55, 48, homeData1, homeData2, nullptr, false, isCN);
 
-            // 图层 4: 开机三选项贴底排版
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
@@ -221,17 +217,14 @@ void renderUI(const UIContext& ctx) {
         case AppState::MY_PROFILE: {
             drawHeader(isCN ? "真实长效 MBTI 画板" : "MY LONG-TERM PROFILE", isCN);
 
-            // 【图层 0 最底层】: Size 4 巨幅 MBTI 发光水印 (坐标 132, 52)
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.setTextSize(4);
             canvas.setCursor(132, 52);
             canvas.print(getMBTIName(ctx.userHistory.dominantMBTI));
 
-            // 【图层 1 & 2】: 半透明雷达图 Overlay
             drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
-            // 【Phase 6 核心】: 实时计算 12 大生活领域跨情境模式
             ContextualPersonalitySummary patternSummary = computeContextualPatterns(getDecisionRecordStore());
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -331,53 +324,40 @@ void renderUI(const UIContext& ctx) {
             break;
         }
 
-        case AppState::BUILDER_WHO:
-        case AppState::BUILDER_SITUATION:
-        case AppState::BUILDER_CONDITION:
+        // 【Phase 6E 极简 3 步提问树 界面渲染】
+        case AppState::BUILDER_INTENT:
+        case AppState::BUILDER_CONTEXT:
         case AppState::BUILDER_TENSION: {
-            const char* title = isCN ? "构造场景" : "CREATE SCENARIO";
-            if (ctx.state == AppState::BUILDER_WHO) title = isCN ? "1. 谁？ (WHO)" : "1. WHO?";
-            else if (ctx.state == AppState::BUILDER_SITUATION) title = isCN ? "2. 什么情境？ (SITUATION)" : "2. SITUATION?";
-            else if (ctx.state == AppState::BUILDER_CONDITION) title = isCN ? "3. 特殊条件？ (CONDITION)" : "3. CONDITION?";
-            else if (ctx.state == AppState::BUILDER_TENSION) title = isCN ? "4. 纠结什么？ (TENSION)" : "4. WHAT'S AT STAKE?";
+            const char* title = isCN ? "1/3 你在纠结什么？" : "1/3 DECISION INTENT?";
+            if (ctx.state == AppState::BUILDER_CONTEXT) title = isCN ? "2/3 关于什么情境？" : "2/3 CONTEXT?";
+            else if (ctx.state == AppState::BUILDER_TENSION) title = isCN ? "3/3 为什么犹豫？" : "3/3 WHY HESITATE?";
 
             drawHeader(title, isCN);
 
-            int count = 6;
-            const char* items[6];
-            const char* icons[] = { "◇", "○", "△", "□", "☆", "⬡" };
-
-            if (ctx.state == AppState::BUILDER_WHO) {
-                for (int i = 0; i < 6; ++i) items[i] = getWhoName(static_cast<WhoType>(i), isCN);
-            } else if (ctx.state == AppState::BUILDER_SITUATION) {
-                for (int i = 0; i < 6; ++i) items[i] = getSituationName(static_cast<SituationType>(i), isCN);
-            } else if (ctx.state == AppState::BUILDER_CONDITION) {
-                for (int i = 0; i < 6; ++i) items[i] = getConditionName(static_cast<ConditionType>(i), isCN);
-            } else if (ctx.state == AppState::BUILDER_TENSION) {
-                for (int i = 0; i < 6; ++i) items[i] = getTensionName(static_cast<TensionType>(i), isCN);
-            }
-
-            for (int i = 0; i < count; ++i) {
-                int col = i % 2;
-                int row = i / 2;
-                int x = (col == 0) ? 8 : 124;
-                int y = 34 + row * 32;
-
-                if (isCN) {
-                    canvas.setFont(&fonts::efontCN_12);
-                    canvas.setTextSize(1);
+            int itemCount = (ctx.state == AppState::BUILDER_INTENT) ? 6 : 4;
+            for (int i = 0; i < itemCount; ++i) {
+                const char* itemText = "";
+                if (ctx.state == AppState::BUILDER_INTENT) {
+                    itemText = getIntentNameCN(static_cast<DecisionIntent>(i));
+                } else if (ctx.state == AppState::BUILDER_CONTEXT) {
+                    itemText = getContextNameCN(ctx.customDecision.intent, i);
                 } else {
-                    canvas.setFont(&fonts::Font0);
-                    canvas.setTextSize(1);
+                    itemText = getTensionNameCN(ctx.customDecision.intent, i);
                 }
 
-                canvas.setCursor(x, y);
+                int y = 28 + i * 17;
+                if (isCN) canvas.setFont(&fonts::efontCN_12);
+                else canvas.setFont(&fonts::Font0);
+
+                canvas.setTextSize(1);
+                canvas.setCursor(6, y);
+
                 if (i == ctx.selectedMenuIndex) {
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.printf("> %s %s", icons[i % 6], items[i]);
+                    canvas.printf("> %s", itemText);
                 } else {
                     canvas.setTextColor(WHITE, BLACK);
-                    canvas.printf("  %s %s", icons[i % 6], items[i]);
+                    canvas.printf("  %s", itemText);
                 }
             }
             break;
@@ -521,7 +501,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 40);
             canvas.printf("%s (%.1f%%)", getMBTIName(ctx.closestMBTI), ctx.matchSimilarity);
 
-            // 【需求 1】: 将“最大分歧”标签统一改为白色 WHITE 渲染！
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
@@ -543,7 +522,6 @@ void renderUI(const UIContext& ctx) {
                 canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
             }
 
-            // 【需求 1 & 2】: “你的选择”标签用白色，且具体内容换至下一行 (Y=108)，同样用白色 WHITE 渲染！
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
