@@ -123,7 +123,7 @@ void renderUI(const UIContext& ctx) {
             // 图层 1 & 2: 48px 巨幅雷达 Logo (中心点 120, 55, 统一亮绿色连线 GREEN)
             drawRadarChart(canvas, 120, 55, 48, homeData, GREEN, DARKCYAN, false, isCN);
 
-            // 图层 3: 【开机三选项均衡等距排版】(将选项2向左平移至 X = 76，完全消除右侧重叠)
+            // 图层 3: 开机三选项贴底排版
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
@@ -206,7 +206,8 @@ void renderUI(const UIContext& ctx) {
         case AppState::MY_PROFILE: {
             drawHeader(isCN ? "真实长效 MBTI 画板" : "MY LONG-TERM PROFILE", isCN);
 
-            drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
+            // 雷达图放大跃升至 40px
+            drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
@@ -383,7 +384,8 @@ void renderUI(const UIContext& ctx) {
         case AppState::YOUR_MATCH: {
             drawHeader(isCN ? "你的决策轮廓" : "YOUR DECISION PROFILE", isCN);
             
-            drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
+            // 雷达图放大跃升至 40px
+            drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
@@ -493,14 +495,17 @@ void renderUI(const UIContext& ctx) {
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle, isCN);
 
-            drawRadarChart(canvas, 180, 68, 35, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
+            // 【雷达图放大跃升至 40px】
+            drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
+            // 【极客 15px 统一等距行高节奏】
+            // 行 1: 选择 (Y = 26)
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(6, 28);
+            canvas.setCursor(6, 26);
             canvas.print(isCN ? "选择: " : "Choice: ");
 
             const char* decName = isCN ? getDecisionNameCN(res.decision) : getDecisionName(res.decision);
@@ -518,21 +523,24 @@ void renderUI(const UIContext& ctx) {
             }
             canvas.print(decName);
 
+            // 行 2: 得分 (Y = 41, 差 15px)
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(6, 50);
+            canvas.setCursor(6, 41);
             canvas.printf(isCN ? "得分: %.1f" : "Score : %.1f", res.score);
 
-            canvas.setCursor(6, 66);
+            // 行 3: 依据 (Y = 56, 差 15px)
+            canvas.setCursor(6, 56);
             canvas.setTextColor(CYAN, BLACK);
             canvas.print(isCN ? "依据:" : "Reason:");
 
+            // 行 4 ~ 7: 依据正文 (Y = 71, 86, 101, 116，统一 15px 行高，改为 WHITE 纯白高亮)
             const char* pReason = isCN ? getDecisionReasonCN(res.reason) : res.reason;
-            int lineY = 79;
-            while (*pReason && lineY <= 120) {
+            int lineY = 71;
+            while (*pReason && lineY <= 116) {
                 char lineBuf[28] = {0};
                 int maxB = isCN ? 21 : 16;
                 int takeBytes = getSafeUTF8Break(pReason, maxB);
@@ -541,9 +549,9 @@ void renderUI(const UIContext& ctx) {
                 pReason += takeBytes;
 
                 canvas.setCursor(6, lineY);
-                canvas.setTextColor(0x7BEF, BLACK);
+                canvas.setTextColor(WHITE, BLACK); // 依据正文改为 WHITE 纯白
                 canvas.print(lineBuf);
-                lineY += 13;
+                lineY += 15; // 统一 15px 极客行高
             }
             break;
         }
