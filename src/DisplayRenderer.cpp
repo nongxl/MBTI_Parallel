@@ -296,11 +296,12 @@ void renderUI(const UIContext& ctx) {
                 for (int i = 0; i < 6; ++i) items[i] = getTensionName(static_cast<TensionType>(i), isCN);
             }
 
+            // 【自定义构造屏全屏充盈大字排版】: X1=8, X2=124; Y1=32, Y2=64, Y3=96
             for (int i = 0; i < count; ++i) {
                 int col = i % 2;
                 int row = i / 2;
-                int x = (col == 0) ? 6 : 122;
-                int y = 34 + row * 32;
+                int x = (col == 0) ? 8 : 124;
+                int y = 32 + row * 32;
 
                 if (isCN) {
                     canvas.setFont(&fonts::efontCN_12);
@@ -328,28 +329,41 @@ void renderUI(const UIContext& ctx) {
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
+            // 【1. 解决标题显示残缺】: 自动安全折行，亮黄色高亮
             canvas.setTextSize(1);
             canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(8, 28);
+            
             const char* titleTxt = isCN ? (ctx.currentScenarioTitleCN[0] ? ctx.currentScenarioTitleCN : "离线情境")
                                         : (ctx.currentScenarioTitle[0] ? ctx.currentScenarioTitle : "SCENARIO");
-            canvas.print(titleTxt);
-
-            canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(8, 46);
             
+            int titleY = 26;
+            const char* pTitle = titleTxt;
+            while (*pTitle && titleY <= 38) {
+                char tBuf[64] = {0};
+                int tBytes = getSafeUTF8Break(pTitle, isCN ? 54 : 37);
+                strncpy(tBuf, pTitle, tBytes);
+                tBuf[tBytes] = '\0';
+                canvas.setCursor(6, titleY);
+                canvas.print(tBuf);
+                pTitle += tBytes;
+                titleY += 15;
+            }
+
+            // 【2. 正文全屏 17px 行高充盈舒展】
+            canvas.setTextColor(WHITE, BLACK);
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
-            int lineY = 46;
-            while (*desc && lineY <= 120) {
+            
+            int lineY = titleY + 3; // 标题下方动态紧随
+            while (*desc && lineY <= 118) {
                 char buf[64] = {0};
                 int takeBytes = getSafeUTF8Break(desc, isCN ? 54 : 37);
                 strncpy(buf, desc, takeBytes);
                 buf[takeBytes] = '\0';
-                canvas.setCursor(8, lineY);
+                canvas.setCursor(6, lineY);
                 canvas.print(buf);
                 desc += takeBytes;
-                lineY += 15;
+                lineY += 17; // 17px 大气充盈行高
             }
             break;
         }
@@ -472,7 +486,7 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(206, 86);
             canvas.printf("%.0f%%", maybePct);
 
-            // 4. 【重构判定算法】: 100% 涵盖多阶优势阵营与占比结论 (Y = 110)
+            // 4. 阵营分布结论概览 (Y = 110)
             canvas.setCursor(6, 110);
             canvas.setTextColor(CYAN, BLACK);
 
