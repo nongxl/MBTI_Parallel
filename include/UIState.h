@@ -62,10 +62,10 @@ struct UIContext {
 
     UserSelection currentSelection;
     Scenario currentScenario;
-    char currentScenarioTitle[32];
-    char currentScenarioDesc[80];
-    char currentScenarioTitleCN[32];
-    char currentScenarioDescCN[80];
+    char currentScenarioTitle[64];
+    char currentScenarioDesc[256];
+    char currentScenarioTitleCN[64];
+    char currentScenarioDescCN[256];
 
     DecisionResult results[MBTI_COUNT];
     DecisionSummary summary;

@@ -394,14 +394,14 @@ void renderUI(const UIContext& ctx) {
             const char* titleTxt = isCN ? (ctx.currentScenarioTitleCN[0] ? ctx.currentScenarioTitleCN : "离线情境")
                                         : (ctx.currentScenarioTitle[0] ? ctx.currentScenarioTitle : "SCENARIO");
             
-            int titleY = 26;
+            int titleY = 25;
             const char* pTitle = titleTxt;
             while (*pTitle && titleY <= 38) {
                 char tBuf[64] = {0};
                 int tBytes = getSafeUTF8Break(pTitle, isCN ? 48 : 32);
                 strncpy(tBuf, pTitle, tBytes);
                 tBuf[tBytes] = '\0';
-                canvas.setCursor(10, titleY);
+                canvas.setCursor(6, titleY);
                 canvas.print(tBuf);
                 pTitle += tBytes;
                 titleY += 15;
@@ -411,16 +411,16 @@ void renderUI(const UIContext& ctx) {
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             
-            int lineY = titleY + 4;
-            while (*desc && lineY <= 118) {
+            int lineY = titleY + 2;
+            while (*desc && lineY <= 122) {
                 char buf[64] = {0};
                 int takeBytes = getSafeUTF8Break(desc, isCN ? 48 : 32);
                 strncpy(buf, desc, takeBytes);
                 buf[takeBytes] = '\0';
-                canvas.setCursor(10, lineY);
+                canvas.setCursor(6, lineY);
                 canvas.print(buf);
                 desc += takeBytes;
-                lineY += 18;
+                lineY += 15;
             }
             break;
         }
