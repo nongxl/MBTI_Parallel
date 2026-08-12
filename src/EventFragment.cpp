@@ -3,9 +3,9 @@
 #include <cstdio>
 #include <cstring>
 
-// ---------------- [50+ 现实生活 Event Fragment 数据库 (带 Phase 6C 事实一致性元数据)] ----------------
+// ---------------- [50+ 丰富多元现实生活 Event Fragment 数据库 (带 Phase 6C 事实 + Phase 6D 底层机制)] ----------------
 static const EventFragment g_fragmentBank[] = {
-    // ==== [1. TRAVEL & ADVENTURE (旅行/探险组)] ====
+    // ==== [1. TRAVEL & ADVENTURE (旅行/探险组 - 机制: OPPORTUNITY_COST / UNCERTAINTY)] ====
     {
         "SETUP_TRAVEL_REST_01", FragmentType::SETUP,
         "你原本打算这个周末待在家里，把最近一直没空看的那几本书读完。",
@@ -14,27 +14,8 @@ static const EventFragment g_fragmentBank[] = {
         { "TRAVEL", "REST" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::STAY_HOME },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::TRAVEL }
-    },
-    {
-        "SETUP_TRAVEL_ROUTINE_02", FragmentType::SETUP,
-        "你最近工作十分顺畅，正想找个机会呼吸一下郊外的森林空气。",
-        "Work went smoothly recently, and you wanted a breath of mountain air.",
-        { ArchetypeID::KNOWN_VS_UNKNOWN, ArchetypeID::LAST_MINUTE_OPPORTUNITY }, 2,
-        { "TRAVEL", "NATURE" }, 10, 30,
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::REST },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::WORK }
-    },
-    {
-        "EVENT_TOKYO_FLIGHT_01", FragmentType::EVENT,
-        "周五晚上，朋友突然发消息说抢到了两张明天去东京的特价机票。",
-        "A friend messages saying he secured cheap flights to Tokyo for tomorrow.",
-        { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::KNOWN_VS_UNKNOWN }, 2,
-        { "TRAVEL", "FLIGHT" }, 10, 30,
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::FLIGHT, CostType::FLIGHT_TICKET, ExistingPlan::NONE },
-        { TransportMode::SELF_DRIVE, CostType::FUEL, ExistingPlan::NONE }
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::TRAVEL },
+        DecisionMechanism::OPPORTUNITY_COST
     },
     {
         "EVENT_ROAD_TRIP_02", FragmentType::EVENT,
@@ -44,17 +25,8 @@ static const EventFragment g_fragmentBank[] = {
         { "TRAVEL", "ROAD_TRIP" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::SELF_DRIVE, CostType::FUEL, ExistingPlan::NONE },
-        { TransportMode::FLIGHT, CostType::FLIGHT_TICKET, ExistingPlan::NONE }
-    },
-    {
-        "CONSTRAINT_TRAVEL_COST_01", FragmentType::CONSTRAINT,
-        "不过往返机票费用需要你自己承担，而且明早6点就要准备出发。",
-        "However, you must cover your flight ticket, and departure is at 6 AM tomorrow.",
-        { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::OPPORTUNITY_VS_REST }, 2,
-        { "TRAVEL", "TIME_PRESSURE" }, 10, 30,
-        { TransportMode::FLIGHT, CostType::NONE, ExistingPlan::NONE }, // 强制要求必须是机票场景！
         { TransportMode::FLIGHT, CostType::FLIGHT_TICKET, ExistingPlan::NONE },
-        { TransportMode::SELF_DRIVE, CostType::FUEL, ExistingPlan::NONE } // 与自驾冲突！
+        DecisionMechanism::UNCERTAINTY
     },
     {
         "CONSTRAINT_SELF_DRIVE_FUEL_02", FragmentType::CONSTRAINT,
@@ -62,9 +34,10 @@ static const EventFragment g_fragmentBank[] = {
         "However, fuel & toll fees will be shared, and you need to share driving duties.",
         { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::OPPORTUNITY_VS_REST }, 2,
         { "TRAVEL", "DRIVE_COST" }, 10, 30,
-        { TransportMode::SELF_DRIVE, CostType::NONE, ExistingPlan::NONE }, // 强制要求必须是自驾游场景！
+        { TransportMode::SELF_DRIVE, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::SELF_DRIVE, CostType::FUEL, ExistingPlan::NONE },
-        { TransportMode::FLIGHT, CostType::FLIGHT_TICKET, ExistingPlan::NONE } // 与机票冲突！
+        { TransportMode::FLIGHT, CostType::FLIGHT_TICKET, ExistingPlan::NONE },
+        DecisionMechanism::RESOURCE_ALLOCATION
     },
     {
         "DECISION_TRAVEL_GO_01", FragmentType::DECISION_FRAME,
@@ -74,91 +47,100 @@ static const EventFragment g_fragmentBank[] = {
         { "TRAVEL", "CHOICE" }, 10, 10,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE }
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::REVERSIBILITY
     },
 
-    // ==== [2. PURCHASE & MONEY (购物/理财/品质组)] ====
+    // ==== [2. LOW-STAKES DAILY (日常轻度决策 - 机制: LOW_STAKES_DAILY / THRESHOLD)] ====
     {
-        "SETUP_PURCHASE_SAVINGS_01", FragmentType::SETUP,
-        "你最近刚为自己下半年的旅游储备制定了严格的预算攒钱计划。",
-        "You recently set up a strict budget plan for a future vacation trip.",
-        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::QUALITY_VS_COST, ArchetypeID::DUPLICATE_PURCHASE }, 3,
-        { "PURCHASE", "PLAN" }, 10, 30,
+        "SETUP_DAILY_COFFEE_01", FragmentType::SETUP,
+        "在午后工作间隙，你习惯性地走进楼下的精选咖啡馆准备点一杯午后饮料。",
+        "During a work break, you walked into the coffee shop downstairs for a drink.",
+        { ArchetypeID::KNOWN_VS_UNKNOWN, ArchetypeID::QUALITY_VS_COST }, 2,
+        { "DAILY", "COFFEE" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE }
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::LOW_STAKES_DAILY
     },
     {
-        "EVENT_GADGET_DISCOUNT_01", FragmentType::EVENT,
-        "你关注了两个月的限定款便携设备今天在商场居然限时六折放量。",
-        "The portable gadget you tracked for two months is suddenly 40% off today.",
-        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::QUALITY_VS_COST }, 2,
-        { "PURCHASE", "DISCOUNT" }, 10, 30,
+        "EVENT_COFFEE_NEW_BEVERAGE_01", FragmentType::EVENT,
+        "收银台前推出了一款口味奇异的特调新品，而你平常常喝的拿铁刚好在做经典打折。",
+        "They launched a strange new special beverage alongside your usual classic latte on sale.",
+        { ArchetypeID::KNOWN_VS_UNKNOWN, ArchetypeID::QUALITY_VS_COST }, 2,
+        { "DAILY", "SPECIAL" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE }
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::LOW_STAKES_DAILY
     },
     {
-        "CONSTRAINT_PURCHASE_BUDGET_01", FragmentType::CONSTRAINT,
-        "虽然折扣诱人，但买下它意味着你要挪用本月原本计划存下的闲钱。",
-        "Although enticing, buying it means using up your planned monthly savings.",
-        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::QUALITY_VS_COST }, 2,
-        { "PURCHASE", "BUDGET" }, 10, 30,
-        { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE }
+        "CONSTRAINT_COFFEE_RISK_01", FragmentType::CONSTRAINT,
+        "新品口碑两极分化严重，有人觉得风味惊艳，也有人觉得口感奇怪难以接受。",
+        "Reviews for the new flavor are polar, some love it while others hate it.",
+        { ArchetypeID::KNOWN_VS_UNKNOWN, ArchetypeID::RISK_VS_CERTAINTY }, 2,
+        { "DAILY", "RISK" }, 10, 30,
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::UNCERTAINTY
     },
     {
-        "DECISION_PURCHASE_BUY_01", FragmentType::DECISION_FRAME,
-        "面对这个难得的限时折扣，你会选择现在下单购买吗？",
-        "Faced with this discount, will you choose to buy it now?",
-        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::DUPLICATE_PURCHASE }, 2,
-        { "PURCHASE", "BUY" }, 10, 10,
+        "DECISION_COFFEE_TRY_01", FragmentType::DECISION_FRAME,
+        "面对这款风险与惊喜并存的新品，你会选择尝试探险吗？",
+        "Will you choose to try this adventurous new flavor drink?",
+        { ArchetypeID::KNOWN_VS_UNKNOWN, ArchetypeID::RISK_VS_CERTAINTY }, 2,
+        { "DAILY", "TRY" }, 10, 10,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE }
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::LOW_STAKES_DAILY
     },
 
-    // ==== [3. WORK & CAREER (职场/机遇/边界组)] ====
+    // ==== [3. DISCOVERY & THRESHOLD (自我观察修换型 - 机制: DISCOVERY / THRESHOLD)] ====
     {
-        "SETUP_WORK_OFF_01", FragmentType::SETUP,
-        "下班前10分钟，你正收拾好东西准备准时回家享受个人夜晚。",
-        "10 minutes before off-work, you packed your bag getting ready to head home.",
-        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::NOW_VS_LATER, ArchetypeID::HELP_VS_BOUNDARY }, 3,
-        { "WORK", "TIME" }, 10, 30,
+        "SETUP_DISCOVERY_GEAR_01", FragmentType::SETUP,
+        "在整理书桌抽屉时，你翻出了一台陪伴你多年的旧数码设备和一张未用完的储值卡。",
+        "While cleaning your desk, you found an old digital device and a prepaid gift card.",
+        { ArchetypeID::DUPLICATE_PURCHASE, ArchetypeID::QUALITY_VS_COST }, 2,
+        { "DISCOVERY", "GEAR" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::TIME, ExistingPlan::WORK },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE }
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::DISCOVERY
     },
     {
-        "EVENT_WORK_HELP_01", FragmentType::EVENT,
-        "同事突然抱来一份紧急项目材料，客气地问你能不能帮忙协助核对。",
-        "A coworker brings urgent project materials, politely asking for your help.",
-        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
-        { "WORK", "HELP" }, 10, 30,
+        "EVENT_GEAR_REPAIR_ISSUE_01", FragmentType::EVENT,
+        "你发现旧设备的屏幕偶尔闪烁，而官方售后给出的维修报价接近购买一台全新升级款。",
+        "The old device screen flickers, official repair costs are close to buying a new one.",
+        { ArchetypeID::QUALITY_VS_COST, ArchetypeID::DUPLICATE_PURCHASE }, 2,
+        { "DISCOVERY", "REPAIR" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::OVERTIME, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE }
+        { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::THRESHOLD
     },
     {
-        "CONSTRAINT_WORK_OVERTIME_01", FragmentType::CONSTRAINT,
-        "但这需要你今晚额外加班至少1.5小时，还会耽误你原本的晚餐约会。",
-        "However, helping out will cost you 1.5 hours of overtime and delay your dinner.",
-        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
-        { "WORK", "OVERTIME" }, 10, 30,
-        { TransportMode::UNKNOWN, CostType::OVERTIME, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::OVERTIME, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE }
+        "CONSTRAINT_GEAR_MEMORIES_01", FragmentType::CONSTRAINT,
+        "旧设备保存着你很多珍贵习惯与历史数据，而买新的需要重新适应配置。",
+        "The old gear holds precious memories, while new gear requires setup time.",
+        { ArchetypeID::QUALITY_VS_COST, ArchetypeID::KNOWN_VS_UNKNOWN }, 2,
+        { "DISCOVERY", "DATA" }, 10, 30,
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::SHORT_TERM_VS_LONG_TERM
     },
     {
-        "DECISION_WORK_HELP_01", FragmentType::DECISION_FRAME,
-        "面对同事的求助，你会选择留下来帮忙吗？",
-        "Facing your coworker's request, will you stay and help?",
-        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
-        { "WORK", "CHOICE" }, 10, 10,
+        "DECISION_GEAR_REPLACE_01", FragmentType::DECISION_FRAME,
+        "面对修与换的抉择，你会选择直接更换全新升级款吗？",
+        "Facing repair vs replace, will you choose to buy a new upgrade?",
+        { ArchetypeID::QUALITY_VS_COST, ArchetypeID::DUPLICATE_PURCHASE }, 2,
+        { "DISCOVERY", "CHOICE" }, 10, 10,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE }
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::THRESHOLD
     }
 };
 
@@ -209,7 +191,6 @@ static const EventFragment* pickFragmentWithFactState(FragmentType type, Archety
                 }
             }
 
-            // 【Phase 6C 关键约束随机】: 必须通过 canApplyFragment 校验！
             bool isFactValid = canApplyFragment(g_fragmentBank[i], state);
 
             if (matchesArch && matchesTag && isFactValid && !isFragmentCoolingDown(g_fragmentBank[i].id)) {
@@ -241,7 +222,6 @@ static const EventFragment* pickFragmentWithFactState(FragmentType type, Archety
     if (count > 0) {
         const EventFragment* chosen = candidates[rand() % count];
         markFragmentUsed(chosen->id);
-        // 【Phase 6C 事实锁定】: 将选取的 Fragment 所提供的结构化事实更新写入 ScenarioState 并锁定！
         state.applyProvides(chosen->providesFact);
         return chosen;
     }
@@ -253,7 +233,6 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
     AssembledStoryScenario story;
     memset(&story, 0, sizeof(story));
 
-    // 【Phase 6C 核心】: 创建并重置场景事实状态机 ScenarioState
     ScenarioState state;
     state.reset();
 
@@ -263,21 +242,22 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
 
     const char* categoryTag = "TRAVEL";
     if (chosenArchetype == ArchetypeID::LIMITED_TIME_PURCHASE || chosenArchetype == ArchetypeID::QUALITY_VS_COST || chosenArchetype == ArchetypeID::DUPLICATE_PURCHASE) {
-        categoryTag = "PURCHASE";
-        story.category = ScenarioCategory::PURCHASE;
+        categoryTag = (rand() % 2 == 0) ? "PURCHASE" : "DAILY";
+        story.category = (strcmp(categoryTag, "DAILY") == 0) ? ScenarioCategory::WORK : ScenarioCategory::PURCHASE;
     } else if (chosenArchetype == ArchetypeID::UNEXPECTED_REQUEST || chosenArchetype == ArchetypeID::HELP_VS_BOUNDARY || chosenArchetype == ArchetypeID::UNCERTAIN_OPPORTUNITY) {
-        categoryTag = "WORK";
+        categoryTag = (rand() % 2 == 0) ? "WORK" : "DISCOVERY";
         story.category = ScenarioCategory::WORK;
     } else {
         categoryTag = "TRAVEL";
         story.category = ScenarioCategory::TRAVEL;
     }
 
-    // 【Phase 6C 链式组装】: 先选 SETUP & EVENT，触发事实写入 State 锁定，再选择严格匹配的 CONSTRAINT！
     const EventFragment* setupFrag = pickFragmentWithFactState(FragmentType::SETUP, chosenArchetype, categoryTag, state);
     const EventFragment* eventFrag = pickFragmentWithFactState(FragmentType::EVENT, chosenArchetype, categoryTag, state);
     const EventFragment* constraintFrag = pickFragmentWithFactState(FragmentType::CONSTRAINT, chosenArchetype, categoryTag, state);
     const EventFragment* decisionFrag = pickFragmentWithFactState(FragmentType::DECISION_FRAME, chosenArchetype, categoryTag, state);
+
+    story.mechanism = eventFrag ? eventFrag->mechanism : DecisionMechanism::OPPORTUNITY_COST;
 
     snprintf(story.titleCN, sizeof(story.titleCN), "现实微场景抉择");
     snprintf(story.titleEN, sizeof(story.titleEN), "REALITY MICRO DECISION");
@@ -300,6 +280,18 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
         snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "BUY WITH DISCOUNT");
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "PASS & SAVE");
         story.scenario = { DecisionType::GET, 35.0f, 75.0f, 20.0f, 85.0f, 30.0f, 15.0f, 40.0f, 80.0f, 70.0f };
+    } else if (strcmp(categoryTag, "DAILY") == 0) {
+        snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "尝试新品 (TRY)");
+        snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "经典稳妥 (STAY)");
+        snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "TRY NEW DRINK");
+        snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "CLASSIC DRINK");
+        story.scenario = { DecisionType::GET, 40.0f, 30.0f, 15.0f, 90.0f, 20.0f, 10.0f, 60.0f, 85.0f, 30.0f };
+    } else if (strcmp(categoryTag, "DISCOVERY") == 0) {
+        snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "换全新款 (NEW)");
+        snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "尝试维修 (FIX)");
+        snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "BUY NEW GEAR");
+        snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "REPAIR OLD GEAR");
+        story.scenario = { DecisionType::GET, 50.0f, 80.0f, 40.0f, 75.0f, 20.0f, 30.0f, 50.0f, 60.0f, 90.0f };
     } else if (strcmp(categoryTag, "WORK") == 0) {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "留下来帮 (HELP)");
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "准时下班 (LEAVE)");
@@ -313,6 +305,10 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "STICK TO PLAN");
         story.scenario = { DecisionType::GO, 75.0f, 65.0f, 70.0f, 92.0f, 60.0f, 50.0f, 85.0f, 88.0f, 45.0f };
     }
+
+    // 记录 Mechanism 签名冷却，防止底层结构重复
+    DecisionSignature sig = { static_cast<uint8_t>(story.category), story.mechanism, DecisionShape::YES_NO };
+    markSignatureUsed(sig);
 
     return story;
 }

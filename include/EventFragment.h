@@ -5,6 +5,7 @@
 #include "Scenario.h"
 #include "DecisionArchetype.h"
 #include "ScenarioState.h"
+#include "DecisionMechanism.h"
 #include <cstdint>
 
 enum class FragmentType {
@@ -31,6 +32,9 @@ struct EventFragment {
     ScenarioFact requiresFact;
     ScenarioFact providesFact;
     ScenarioFact conflictsFact;
+
+    // 【Phase 6D 底层决策机制】
+    DecisionMechanism mechanism;
 };
 
 enum class NarrativePatternID {
@@ -45,6 +49,7 @@ struct AssembledStoryScenario {
     ArchetypeID archetype;
     ScenarioCategory category;
     NarrativePatternID patternId;
+    DecisionMechanism mechanism;
 
     char titleCN[48];
     char bodyCN[512];
