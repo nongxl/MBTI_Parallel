@@ -206,6 +206,14 @@ void renderUI(const UIContext& ctx) {
         case AppState::MY_PROFILE: {
             drawHeader(isCN ? "真实长效 MBTI 画板" : "MY LONG-TERM PROFILE", isCN);
 
+            // 【图层 0 最底层】: MBTI 4 字母背景发光大字 (如 INTP)
+            canvas.setFont(&fonts::Font0);
+            canvas.setTextColor(YELLOW, BLACK);
+            canvas.setTextSize(3);
+            canvas.setCursor(144, 56);
+            canvas.print(getMBTIName(ctx.userHistory.dominantMBTI));
+
+            // 【图层 1 & 2】: 半透明雷达图 Overlay
             drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -296,7 +304,6 @@ void renderUI(const UIContext& ctx) {
                 for (int i = 0; i < 6; ++i) items[i] = getTensionName(static_cast<TensionType>(i), isCN);
             }
 
-            // 【自定义构造屏全屏充盈大字排版】: X1=8, X2=124; Y1=32, Y2=64, Y3=96
             for (int i = 0; i < count; ++i) {
                 int col = i % 2;
                 int row = i / 2;
@@ -329,7 +336,6 @@ void renderUI(const UIContext& ctx) {
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
-            // 【1. 解决标题显示残缺】: 自动安全折行，亮黄色高亮
             canvas.setTextSize(1);
             canvas.setTextColor(YELLOW, BLACK);
             
@@ -349,12 +355,11 @@ void renderUI(const UIContext& ctx) {
                 titleY += 15;
             }
 
-            // 【2. 正文全屏 17px 行高充盈舒展】
             canvas.setTextColor(WHITE, BLACK);
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             
-            int lineY = titleY + 3; // 标题下方动态紧随
+            int lineY = titleY + 3;
             while (*desc && lineY <= 118) {
                 char buf[64] = {0};
                 int takeBytes = getSafeUTF8Break(desc, isCN ? 54 : 37);
@@ -363,7 +368,7 @@ void renderUI(const UIContext& ctx) {
                 canvas.setCursor(6, lineY);
                 canvas.print(buf);
                 desc += takeBytes;
-                lineY += 17; // 17px 大气充盈行高
+                lineY += 17;
             }
             break;
         }
@@ -397,6 +402,14 @@ void renderUI(const UIContext& ctx) {
         case AppState::YOUR_MATCH: {
             drawHeader(isCN ? "你的决策轮廓" : "YOUR DECISION PROFILE", isCN);
             
+            // 【图层 0 最底层】: MBTI 4 字母背景发光大字 (如 INTJ)
+            canvas.setFont(&fonts::Font0);
+            canvas.setTextColor(YELLOW, BLACK);
+            canvas.setTextSize(3);
+            canvas.setCursor(144, 56);
+            canvas.print(getMBTIName(ctx.closestMBTI));
+
+            // 【图层 1 & 2】: 半透明雷达图 Overlay
             drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -516,6 +529,14 @@ void renderUI(const UIContext& ctx) {
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle, isCN);
 
+            // 【图层 0 最底层】: 16 人格实时动态 MBTI 4 字母背景发光大字 (如 INFJ / ENTP)
+            canvas.setFont(&fonts::Font0);
+            canvas.setTextColor(YELLOW, BLACK);
+            canvas.setTextSize(3);
+            canvas.setCursor(144, 56);
+            canvas.print(getMBTIName(res.personality));
+
+            // 【图层 1 & 2】: 半透明雷达图 Overlay 覆盖在 MBTI 四字母上方
             drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
