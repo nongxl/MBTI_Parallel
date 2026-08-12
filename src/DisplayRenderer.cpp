@@ -521,17 +521,31 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 58);
             canvas.print(isCN ? "最大分歧:" : "BIGGEST DIFF:");
 
+            // 【彻底解决 Bug 2】: 检查 16 人格中是否存在不同选择。若所有人格决策一致，绝不假弹异议！
+            bool hasDiffChoice = false;
+            for (int i = 0; i < MBTI_COUNT; ++i) {
+                if (ctx.results[i].decision != ctx.userChoice) {
+                    hasDiffChoice = true;
+                    break;
+                }
+            }
+
             canvas.setCursor(6, 72);
-            canvas.setTextColor(RED, BLACK);
-            const char* diffDecTxt = isCN ? getScenarioActionNameCN(ctx.biggestDiffDecision, ctx.currentScenario.type)
-                                          : getScenarioActionNameEN(ctx.biggestDiffDecision, ctx.currentScenario.type);
-            
-            if (isCN) {
-                canvas.setFont(&fonts::efontCN_12);
-                canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
+            if (!hasDiffChoice) {
+                canvas.setTextColor(GREEN, BLACK);
+                canvas.print(isCN ? "全员一致 (无异议)" : "UNANIMOUS (NO DIFF)");
             } else {
-                canvas.setFont(&fonts::Font0);
-                canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
+                canvas.setTextColor(RED, BLACK);
+                const char* diffDecTxt = isCN ? getScenarioActionNameCN(ctx.biggestDiffDecision, ctx.currentScenario.type)
+                                              : getScenarioActionNameEN(ctx.biggestDiffDecision, ctx.currentScenario.type);
+                
+                if (isCN) {
+                    canvas.setFont(&fonts::efontCN_12);
+                    canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
+                } else {
+                    canvas.setFont(&fonts::Font0);
+                    canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
+                }
             }
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -659,12 +673,19 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 110);
             canvas.setTextColor(CYAN, BLACK);
 
-            if (ctx.summary.yesCount >= 10) {
-                canvas.print(isCN ? "主流阵营: 压倒性同意 (62%+)" : "DOMINANT: OVERWHELMING YES");
+            // 【彻底解决 Bug 3】: 彻底消除死板的 (62%+) 写死字符串，完美呈现真实的百分比统计！
+            if (ctx.summary.yesCount == 16) {
+                canvas.print(isCN ? "主流阵营: 100% 全员一致同意" : "DOMINANT: 100% UNANIMOUS YES");
+            } else if (ctx.summary.noCount == 16) {
+                canvas.print(isCN ? "主流阵营: 100% 全员一致拒绝" : "DOMINANT: 100% UNANIMOUS NO");
+            } else if (ctx.summary.maybeCount == 16) {
+                canvas.print(isCN ? "主流阵营: 100% 全员一致犹豫" : "DOMINANT: 100% UNANIMOUS MAYBE");
+            } else if (ctx.summary.yesCount >= 10) {
+                canvas.printf(isCN ? "主流阵营: 压倒性同意 (%.0f%%)" : "DOMINANT: OVERWHELMING YES (%.0f%%)", yesPct);
             } else if (ctx.summary.noCount >= 10) {
-                canvas.print(isCN ? "主流阵营: 压倒性拒绝 (62%+)" : "DOMINANT: OVERWHELMING NO");
+                canvas.printf(isCN ? "主流阵营: 压倒性拒绝 (%.0f%%)" : "DOMINANT: OVERWHELMING NO (%.0f%%)", noPct);
             } else if (ctx.summary.maybeCount >= 10) {
-                canvas.print(isCN ? "主流阵营: 压倒性犹豫 (62%+)" : "DOMINANT: OVERWHELMING MAYBE");
+                canvas.printf(isCN ? "主流阵营: 压倒性犹豫 (%.0f%%)" : "DOMINANT: OVERWHELMING MAYBE (%.0f%%)", maybePct);
             } else if (ctx.summary.yesCount >= 8) {
                 canvas.print(isCN ? "主流阵营: 优势倾向同意" : "MAJORITY: TENDS TO YES");
             } else if (ctx.summary.noCount >= 8) {

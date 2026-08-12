@@ -55,17 +55,14 @@ void buildCustomScenarioState(const CustomDecisionState& customState, ScenarioSt
 
     if (customState.intent == DecisionIntent::BUY_OR_NOT) {
         outCategory = ScenarioCategory::PURCHASE;
-        outArchetype = ArchetypeID::LIMITED_TIME_PURCHASE;
-        if (customState.tensionIndex == 0) {
-            outArchetype = ArchetypeID::DUPLICATE_PURCHASE;
-        }
+        outArchetype = (customState.tensionIndex == 0) ? ArchetypeID::DUPLICATE_PURCHASE : ArchetypeID::LIMITED_TIME_PURCHASE;
         outState.costType = CostType::BUDGET;
     } else if (customState.intent == DecisionIntent::GO_OR_NOT || customState.intent == DecisionIntent::ACCEPT_OR_DECLINE) {
-        if (customState.contextIndex == 1) { // 同事
+        if (customState.contextIndex == 1) { // 同事 / 工作
             outCategory = ScenarioCategory::WORK;
             outArchetype = ArchetypeID::UNEXPECTED_REQUEST;
             outState.existingPlan = ExistingPlan::WORK;
-        } else {
+        } else { // 朋友 / 旅行
             outCategory = ScenarioCategory::TRAVEL;
             outArchetype = ArchetypeID::LAST_MINUTE_OPPORTUNITY;
             outState.existingPlan = ExistingPlan::STAY_HOME;

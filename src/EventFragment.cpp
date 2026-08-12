@@ -97,50 +97,50 @@ static const EventFragment g_fragmentBank[] = {
         DecisionMechanism::LOW_STAKES_DAILY
     },
 
-    // ==== [3. DISCOVERY & THRESHOLD (自我观察修换型 - 机制: DISCOVERY / THRESHOLD)] ====
+    // ==== [3. WORK & CAREER (职场/协作组)] ====
     {
-        "SETUP_DISCOVERY_GEAR_01", FragmentType::SETUP,
-        "在整理书桌抽屉时，你翻出了一台陪伴你多年的旧数码设备和一张未用完的储值卡。",
-        "While cleaning your desk, you found an old digital device and a prepaid gift card.",
-        { ArchetypeID::DUPLICATE_PURCHASE, ArchetypeID::QUALITY_VS_COST }, 2,
-        { "DISCOVERY", "GEAR" }, 10, 30,
+        "SETUP_WORK_OFF_01", FragmentType::SETUP,
+        "下班前10分钟，你正收拾好东西准备准时回家享受个人夜晚。",
+        "10 minutes before off-work, you packed your bag getting ready to head home.",
+        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::NOW_VS_LATER, ArchetypeID::HELP_VS_BOUNDARY }, 3,
+        { "WORK", "TIME" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::TIME, ExistingPlan::WORK },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        DecisionMechanism::DISCOVERY
+        DecisionMechanism::OPPORTUNITY_COST
     },
     {
-        "EVENT_GEAR_REPAIR_ISSUE_01", FragmentType::EVENT,
-        "你发现旧设备的屏幕偶尔闪烁，而官方售后给出的维修报价接近购买一台全新升级款。",
-        "The old device screen flickers, official repair costs are close to buying a new one.",
-        { ArchetypeID::QUALITY_VS_COST, ArchetypeID::DUPLICATE_PURCHASE }, 2,
-        { "DISCOVERY", "REPAIR" }, 10, 30,
+        "EVENT_WORK_HELP_01", FragmentType::EVENT,
+        "同事突然抱来一份紧急项目材料，客气地问你能不能帮忙协助核对。",
+        "A coworker brings urgent project materials, politely asking for your help.",
+        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
+        { "WORK", "HELP" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::OVERTIME, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        DecisionMechanism::THRESHOLD
+        DecisionMechanism::SOCIAL_EXPECTATION
     },
     {
-        "CONSTRAINT_GEAR_MEMORIES_01", FragmentType::CONSTRAINT,
-        "旧设备保存着你很多珍贵习惯与历史数据，而买新的需要重新适应配置。",
-        "The old gear holds precious memories, while new gear requires setup time.",
-        { ArchetypeID::QUALITY_VS_COST, ArchetypeID::KNOWN_VS_UNKNOWN }, 2,
-        { "DISCOVERY", "DATA" }, 10, 30,
+        "CONSTRAINT_WORK_UNCERTAIN_02", FragmentType::CONSTRAINT,
+        "但你对该项目的具体背景和活动细节完全不了解，无法预估要花多少精力和时间，也不知道是否值得。",
+        "However, you know little about project details, unsure of time/energy required or if it's worth it.",
+        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
+        { "WORK", "UNCERTAIN" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::OVERTIME, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        DecisionMechanism::SHORT_TERM_VS_LONG_TERM
+        DecisionMechanism::UNCERTAINTY
     },
     {
-        "DECISION_GEAR_REPLACE_01", FragmentType::DECISION_FRAME,
-        "面对修与换的抉择，你会选择直接更换全新升级款吗？",
-        "Facing repair vs replace, will you choose to buy a new upgrade?",
-        { ArchetypeID::QUALITY_VS_COST, ArchetypeID::DUPLICATE_PURCHASE }, 2,
-        { "DISCOVERY", "CHOICE" }, 10, 10,
+        "DECISION_WORK_HELP_01", FragmentType::DECISION_FRAME,
+        "面对同事的求助，你会选择留下来帮忙吗？",
+        "Facing your coworker's request, will you stay and help?",
+        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
+        { "WORK", "CHOICE" }, 10, 10,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        DecisionMechanism::THRESHOLD
+        DecisionMechanism::BOUNDARY
     }
 };
 
@@ -245,7 +245,7 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
         categoryTag = (rand() % 2 == 0) ? "PURCHASE" : "DAILY";
         story.category = (strcmp(categoryTag, "DAILY") == 0) ? ScenarioCategory::WORK : ScenarioCategory::PURCHASE;
     } else if (chosenArchetype == ArchetypeID::UNEXPECTED_REQUEST || chosenArchetype == ArchetypeID::HELP_VS_BOUNDARY || chosenArchetype == ArchetypeID::UNCERTAIN_OPPORTUNITY) {
-        categoryTag = (rand() % 2 == 0) ? "WORK" : "DISCOVERY";
+        categoryTag = "WORK";
         story.category = ScenarioCategory::WORK;
     } else {
         categoryTag = "TRAVEL";
@@ -286,18 +286,14 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
         snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "TRY NEW DRINK");
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "CLASSIC DRINK");
         story.scenario = { DecisionType::GET, 40.0f, 30.0f, 15.0f, 90.0f, 20.0f, 10.0f, 60.0f, 85.0f, 30.0f };
-    } else if (strcmp(categoryTag, "DISCOVERY") == 0) {
-        snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "换全新款 (NEW)");
-        snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "尝试维修 (FIX)");
-        snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "BUY NEW GEAR");
-        snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "REPAIR OLD GEAR");
-        story.scenario = { DecisionType::GET, 50.0f, 80.0f, 40.0f, 75.0f, 20.0f, 30.0f, 50.0f, 60.0f, 90.0f };
     } else if (strcmp(categoryTag, "WORK") == 0) {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "留下来帮 (HELP)");
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "准时下班 (LEAVE)");
         snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "STAY & HELP");
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "LEAVE ON TIME");
-        story.scenario = { DecisionType::DO, 25.0f, 30.0f, 85.0f, 30.0f, 90.0f, 75.0f, 25.0f, 60.0f, 85.0f };
+        
+        // 【关键修复】: 动态平衡 WORK 场景中的不确定性风险 (Risk/Uncertainty=85) 与人际压力，产生精彩的 16 人格激战分歧！
+        story.scenario = { DecisionType::DO, 75.0f, 85.0f, 85.0f, 30.0f, 35.0f, 80.0f, 25.0f, 70.0f, 75.0f };
     } else {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "果断前往 (GO)");
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "按原计划 (STAY)");
@@ -306,7 +302,6 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
         story.scenario = { DecisionType::GO, 75.0f, 65.0f, 70.0f, 92.0f, 60.0f, 50.0f, 85.0f, 88.0f, 45.0f };
     }
 
-    // 记录 Mechanism 签名冷却，防止底层结构重复
     DecisionSignature sig = { static_cast<uint8_t>(story.category), story.mechanism, DecisionShape::YES_NO };
     markSignatureUsed(sig);
 
