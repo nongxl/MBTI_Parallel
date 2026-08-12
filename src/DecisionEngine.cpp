@@ -1,82 +1,87 @@
 #include "DecisionEngine.h"
 #include <cmath>
-#include <algorithm>
-#include <cstring>
 
-static float clampValue(float val, float minV = 0.0f, float maxV = 100.0f) {
-    return std::max(minV, std::min(maxV, val));
+static float clampScore(float score) {
+    if (score < 0.0f) return 0.0f;
+    if (score > 100.0f) return 100.0f;
+    return score;
 }
 
-DecisionResult evaluateDecision(const PersonalityProfile& profile, const Scenario& scenario) {
-    DecisionResult res;
-    res.personality = profile.type;
+DecisionResult simulateMBTI(MBTIType personality, const Scenario& scenario) {
+    const PersonalityProfile& profile = getMBTIProfile(personality);
 
-    // 六维综合权重加权算法
-    float score = 50.0f; // 基准中立分
+    // 向量加权决策意愿算法
+    float score = 50.0f;
 
-    score += (profile.risk - 50.0f) * (scenario.risk / 100.0f) * 0.25f;
-    score += (profile.novelty - 50.0f) * (scenario.novelty / 100.0f) * 0.25f;
-    score += (profile.social - 50.0f) * (scenario.social / 100.0f) * 0.20f;
-    score += (profile.logic - 50.0f) * (scenario.practicalValue / 100.0f) * 0.15f;
-    score -= (profile.planning - 50.0f) * (scenario.uncertainty / 100.0f) * 0.20f;
-    score += (profile.practicality - 50.0f) * (scenario.practicalValue / 100.0f) * 0.15f;
+    // 1. 风险与不确定性
+    score += (profile.risk - scenario.risk) * 0.20f;
+    score -= (scenario.uncertainty * (100.0f - profile.planning) / 100.0f) * 0.15f;
 
-    res.score = clampValue(score);
+    // 2. 新奇度与体验价值
+    score += (profile.novelty * scenario.novelty / 100.0f) * 0.25f;
+    score += (profile.novelty * scenario.emotionalValue / 100.0f) * 0.15f;
 
-    // 确定 Decision 结果与决策依据
-    if (res.score >= 58.0f) {
-        res.decision = Decision::YES;
-        if (profile.novelty >= 75.0f && scenario.novelty >= 50.0f) {
-            res.reason = "NOVELTY SEEKING INSTINCT";
-        } else if (profile.risk >= 70.0f && scenario.risk >= 50.0f) {
-            res.reason = "HIGH RISK ACCEPTANCE";
-        } else if (profile.social >= 70.0f && scenario.social >= 50.0f) {
-            res.reason = "SOCIAL INVOLVEMENT PREFERENCE";
-        } else if (profile.logic >= 70.0f) {
-            res.reason = "ANALYTICAL LOGIC MATCH";
-        } else {
-            res.reason = "POSITIVE VALUE ALIGNMENT";
-        }
-    } else if (res.score <= 42.0f) {
-        res.decision = Decision::NO;
-        if (profile.planning >= 70.0f && scenario.uncertainty >= 40.0f) {
-            res.reason = "STRUCTURED PLANNING NEEDED";
-        } else if (profile.risk <= 35.0f && scenario.risk >= 50.0f) {
-            res.reason = "CAUTIOUS RISK AVOIDANCE";
-        } else if (profile.social <= 35.0f && scenario.social >= 60.0f) {
-            res.reason = "SOLITUDE & FREEDOM PREFERRED";
-        } else {
-            res.reason = "STABILITY & SAFETY FIRST";
-        }
+    // 3. 社交与精力付出
+    score += (profile.social * scenario.social / 100.0f) * 0.20f;
+    score -= (scenario.effort * (100.0f - profile.social) / 100.0f) * 0.10f;
+
+    // 4. 代价与实用价值
+    score += (profile.practicality * scenario.practicalValue / 100.0f) * 0.20f;
+    score -= (scenario.cost * (100.0f - profile.practicality) / 100.0f) * 0.15f;
+
+    // 5. 逻辑与时间代价
+    score += (profile.logic * 10.0f / 100.0f);
+    score -= (scenario.time * (100.0f - profile.logic) / 100.0f) * 0.10f;
+
+    score = clampScore(score);
+
+    Decision decision;
+    if (score >= 60.0f) {
+        decision = Decision::YES;
+    } else if (score <= 40.0f) {
+        decision = Decision::NO;
     } else {
-        res.decision = Decision::MAYBE;
-        res.reason = "BALANCED WEIGHING OPTION";
+        decision = Decision::MAYBE;
     }
 
-    return res;
+    const char* reason = "综合评估个人偏好与场景风险";
+    if (scenario.risk > 60.0f && profile.risk < 40.0f) {
+        reason = "风险过高，超出安全边界";
+    } else if (scenario.novelty > 70.0f && profile.novelty > 70.0f) {
+        reason = "极为新奇，高度契合探险渴望";
+    } else if (scenario.social > 70.0f && profile.social < 30.0f) {
+        reason = "社交消耗过大，偏好独立自主";
+    } else if (scenario.practicalValue > 70.0f && profile.practicality > 70.0f) {
+        reason = "务实高效，具备极高实际价值";
+    }
+
+    return { personality, decision, score, reason };
 }
 
-void simulateAll(const Scenario& scenario, DecisionResult outResults[MBTI_COUNT]) {
+void simulateAll(const Scenario& scenario, DecisionResult results[MBTI_COUNT]) {
     for (int i = 0; i < MBTI_COUNT; ++i) {
-        const PersonalityProfile& prof = getMBTIProfile(static_cast<MBTIType>(i));
-        outResults[i] = evaluateDecision(prof, scenario);
+        results[i] = simulateMBTI(static_cast<MBTIType>(i), scenario);
     }
 }
 
 DecisionSummary summarizeResults(const DecisionResult results[MBTI_COUNT]) {
-    DecisionSummary summary = {0, 0, 0};
+    DecisionSummary summary = { 0, 0, 0 };
     for (int i = 0; i < MBTI_COUNT; ++i) {
-        if (results[i].decision == Decision::YES) summary.yesCount++;
-        else if (results[i].decision == Decision::NO) summary.noCount++;
-        else summary.maybeCount++;
+        if (results[i].decision == Decision::YES) {
+            summary.yesCount++;
+        } else if (results[i].decision == Decision::NO) {
+            summary.noCount++;
+        } else {
+            summary.maybeCount++;
+        }
     }
     return summary;
 }
 
 void findBiggestSplit(const DecisionResult results[MBTI_COUNT], MBTIType& yesType, MBTIType& noType) {
     float maxYesScore = -1.0f;
-    float minNoScore = 999.0f;
-    yesType = MBTIType::ENTP;
+    float minNoScore = 101.0f;
+    yesType = MBTIType::ENFP;
     noType = MBTIType::ISTJ;
 
     for (int i = 0; i < MBTI_COUNT; ++i) {
@@ -109,67 +114,81 @@ const char* getDecisionNameCN(Decision decision) {
     return "未知";
 }
 
-// 【16 人格专属心理学依据映射矩阵】
-// 即使做出完全相同的 Decision (如 YES)，不同 MBTI 人格从各自的认知功能 (Cognitive Functions) 出发，给出完全不重样的深层依据！
-const char* getDecisionReasonCN(const char* reasonEN, MBTIType personality, Decision decision) {
-    if (decision == Decision::YES) {
-        switch (personality) {
-            case MBTIType::INTP: return "追求底层原理自洽，边际收益模型清晰";
-            case MBTIType::INTJ: return "符合远期战略布局，风险受控在模型内";
-            case MBTIType::ENTP: return "打破既有思维框架，拥抱绝佳脑洞尝试";
-            case MBTIType::ENTJ: return "符合高效目标达成，迅速锁定掌控权";
-            case MBTIType::INFJ: return "洞察到深层人文价值，符合长远使命";
-            case MBTIType::INFP: return "内心价值强烈共鸣，坚守纯粹个体信念";
-            case MBTIType::ENFJ: return "促进团队深度凝聚，带来积极情绪共鸣";
-            case MBTIType::ENFP: return "极具灵感与生活热忱，激发现场活力";
-            case MBTIType::ISTJ: return "规章明确已有先例，按秩序稳健推进";
-            case MBTIType::ISFJ: return "贴心照顾身边现实需求，关怀安全";
-            case MBTIType::ESTJ: return "符合标准实用规范，务实落地效率高";
-            case MBTIType::ESFJ: return "符合社会普遍期待，维护和谐人际礼仪";
-            case MBTIType::ISTP: return "实操工具与技术可行，可随时灵活应对";
-            case MBTIType::ISFP: return "顺应当下身心感受，追求艺术自由";
-            case MBTIType::ESTP: return "果断抓取眼前即时机会，享受刺激破局";
-            case MBTIType::ESFP: return "现场气氛高涨，抓住当下快乐体验";
+const char* getDecisionReasonCN(const char* fallbackReason, MBTIType personality, Decision decision, DecisionType scenarioType) {
+    if (scenarioType == DecisionType::GET) { // 购物/理财场景 (如六折便携设备 vs 攒钱预算)
+        if (decision == Decision::YES) {
+            switch (personality) {
+                case MBTIType::ENFP: return "六折限定诱惑太大，对新奇好物毫无抵抗力";
+                case MBTIType::ESTP: return "抓取即时冲动满足感，千金难买心头好";
+                case MBTIType::ENTP: return "看重限定科技感，当作投资自己探索新玩意";
+                case MBTIType::ESFP: return "折后性价比极高，能带来当下极高的情绪快乐";
+                case MBTIType::ENTJ: return "评估设备对效率的提升价值，果断下订单";
+                case MBTIType::ISTP: return "研究过设备参数，打折入手实操性价比高";
+                default: return "限定优惠难得，享受消费喜悦";
+            }
+        } else if (decision == Decision::NO) {
+            switch (personality) {
+                case MBTIType::ISTJ: return "严守下半年攒钱计划，绝不为打折动用闲钱";
+                case MBTIType::INTJ: return "非战略必需品，冲动消费会打破长远资金规划";
+                case MBTIType::ISFJ: return "出于对已知开支的焦虑，优先保留存款安全感";
+                case MBTIType::ESTJ: return "评估现有设备依然可用，拒绝无谓的预算浪费";
+                case MBTIType::INFP: return "对物资没有强烈执念，更看重内心精神充实";
+                default: return "遵守现有预算，理性克制冲动";
+            }
+        } else { // MAYBE
+            switch (personality) {
+                case MBTIType::INTP: return "在设备参数性能提升与预算消耗间反复建模纠结";
+                case MBTIType::INFJ: return "内心在物质体验欲望与克制节约间拉锯观望";
+                default: return "评估折扣力度与预算落差，犹豫观望";
+            }
         }
-    } else if (decision == Decision::NO) {
-        switch (personality) {
-            case MBTIType::INTP: return "逻辑模型存在漏洞，缺乏底层理论支撑";
-            case MBTIType::INTJ: return "无益于远期战略目标，存在不可控随机扰动";
-            case MBTIType::ENTP: return "过于死板教条，缺乏创新脑洞空间";
-            case MBTIType::ENTJ: return "执行效率低下且掌控力不足，拖慢进度";
-            case MBTIType::INFJ: return "违背内在人文伦理，可能伤害群体感情";
-            case MBTIType::INFP: return "违背个人核心价值观，无法违背内心意志";
-            case MBTIType::ENFJ: return "可能引发团队内部对立，破坏整体和谐";
-            case MBTIType::ENFP: return "过程枯燥乏味，剥夺了个体自由与热情";
-            case MBTIType::ISTJ: return "缺乏已知可靠经验，规避规章外潜在风险";
-            case MBTIType::ISFJ: return "打破现有稳定生活，带来未知焦虑风险";
-            case MBTIType::ESTJ: return "缺乏实用落地价值，不符合高效管理标准";
-            case MBTIType::ESFJ: return "可能违背传统规范，影响良好人际评价";
-            case MBTIType::ISTP: return "限制个体行动自由，实操性价比过低";
-            case MBTIType::ISFP: return "内心产生强烈排斥压迫感，违背身心舒适";
-            case MBTIType::ESTP: return "缺乏即时反馈收益，沉闷无趣";
-            case MBTIType::ESFP: return "氛围过于沉闷压抑，扫兴且不快乐";
+    } else if (scenarioType == DecisionType::DO) { // 工作/求助场景 (如加班1.5小时协助核对 vs 晚餐约会)
+        if (decision == Decision::YES) {
+            switch (personality) {
+                case MBTIType::ESTJ: return "高效协助核对，看重项目把控力与团队整体进度";
+                case MBTIType::ENFJ: return "体恤同事紧急难处，促进团队和谐合作";
+                case MBTIType::ENTJ: return "快速锁定掌控权，解决瓶颈确保项目交付";
+                case MBTIType::ISFJ: return "热心贴心照顾同事求助，彰显责任担当";
+                default: return "伸出援手协助，重视合作价值";
+            }
+        } else if (decision == Decision::NO) {
+            switch (personality) {
+                case MBTIType::INFP: return "极其珍视下班后个人精神独处，坚守私人边界";
+                case MBTIType::ISTP: return "非职责范围内临时突发事，拒绝无谓加班消耗";
+                case MBTIType::INTJ: return "临时插队打破了今晚个人计划，拒绝无序打扰";
+                case MBTIType::ESFP: return "已有安排好的晚餐约会，不想扫了朋友的兴";
+                default: return "保护私人休息时间，守住边界";
+            }
+        } else { // MAYBE
+            switch (personality) {
+                case MBTIType::INFJ: return "既体恤同事求助难处，又纠结已约好的私人晚餐";
+                case MBTIType::INTP: return "评估协助所需实际耗时，犹豫是否值得加班";
+                default: return "平衡人情求助与私人约会，摇摆不定";
+            }
         }
-    } else { // MAYBE
-        switch (personality) {
-            case MBTIType::INTP: return "推导数据不足，需进一步建模论证";
-            case MBTIType::INTJ: return "长远与短期利益存在冲突，评估博弈比重";
-            case MBTIType::ENTP: return "方案虽有趣但细节待完善，观望替代方案";
-            case MBTIType::ENTJ: return "资源投入产出比尚不明确，等待最佳时机";
-            case MBTIType::INFJ: return "理性思考与感性直觉发生拉锯，反复体会";
-            case MBTIType::INFP: return "理想期待与现实约束存在落差，陷入纠结";
-            case MBTIType::ENFJ: return "试图兼顾各方诉求，寻找最大公约数";
-            case MBTIType::ENFP: return "新想法层出不穷，在多个选择间摇摆";
-            case MBTIType::ISTJ: return "需收集更多已知案例数据，谨慎比对";
-            case MBTIType::ISFJ: return "既想维持现状稳定，又担心辜负他人期待";
-            case MBTIType::ESTJ: return "评估既定规则与例外情况的平衡成本";
-            case MBTIType::ESFJ: return "关注大众看法，等待更清晰的群体共识";
-            case MBTIType::ISTP: return "观察现场动态变化，保留随时退出的自由";
-            case MBTIType::ISFP: return "需要静心倾听内在声音，不想仓促决定";
-            case MBTIType::ESTP: return "评估风险收益比，寻找回报率最高切入点";
-            case MBTIType::ESFP: return "视当时现场气氛与同伴情绪而灵活决定";
+    } else { // 旅行/探险场景 (如明天去东京特价机票 vs 机票自理早起)
+        if (decision == Decision::YES) {
+            switch (personality) {
+                case MBTIType::ENFP: return "极具生活热忱与灵感，对突如其来的远方说走就走";
+                case MBTIType::ENTP: return "明早6点出发更显探险刺激，摆脱常规框架索性一试";
+                case MBTIType::ESTP: return "果断抓取眼前即时机会，享受不可预知的新鲜感";
+                default: return "拥抱未知旅程，享受即兴惊喜";
+            }
+        } else if (decision == Decision::NO) {
+            switch (personality) {
+                case MBTIType::INTJ: return "未提前制定详尽旅行路线与时间表，拒绝无秩序仓促";
+                case MBTIType::ISTJ: return "自费机票与早起成本较高，缺乏已知规划保障";
+                case MBTIType::ISFJ: return "仓促出行带来不确定焦虑，偏好既有周六居家安排";
+                default: return "偏好既定计划，规避无准备风险";
+            }
+        } else { // MAYBE
+            switch (personality) {
+                case MBTIType::INFJ: return "渴望去未曾体验的远方，但又在早起成本与安逸间纠结";
+                case MBTIType::INTP: return "理性计算往返费用与行程收益，陷入推导等待";
+                default: return "权衡行程精彩度与自理成本，犹豫观望";
+            }
         }
     }
 
-    return "综合权衡个人偏好";
+    return fallbackReason ? fallbackReason : "综合权衡个人偏好";
 }

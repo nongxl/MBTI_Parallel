@@ -727,7 +727,8 @@ void renderUI(const UIContext& ctx) {
             canvas.setTextColor(CYAN, BLACK);
             canvas.print(isCN ? "依据:" : "Reason:");
 
-            const char* pReason = isCN ? getDecisionReasonCN(res.reason, res.personality, res.decision) : res.reason;
+            // 【神级体验升级】传入 ctx.currentScenario.type 绑定故事中的特定抉择因素（如机票自理、限时六折等）
+            const char* pReason = isCN ? getDecisionReasonCN(res.reason, res.personality, res.decision, ctx.currentScenario.type) : res.reason;
             int lineY = 71;
             while (*pReason && lineY <= 116) {
                 char lineBuf[28] = {0};

@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstring>
 
-// ---------------- [高质量现实故事 Event Fragment 数据库 (严格 Category 与 Tag 分组)] ----------------
+// ---------------- [高质量现实故事 Event Fragment 数据库 (带 6 维度参数物理映射)] ----------------
 static const EventFragment g_fragmentBank[] = {
     // ==== [1. TRAVEL & OPPORTUNITY (旅行/机会组)] ====
     {
@@ -150,7 +150,6 @@ static const EventFragment* pickFragmentWithTag(FragmentType type, ArchetypeID a
     }
 
     if (count == 0) {
-        // Fallback 宽容匹配
         for (int i = 0; i < FRAGMENT_BANK_SIZE; ++i) {
             if (g_fragmentBank[i].type == type) {
                 bool matchesTag = true;
@@ -187,7 +186,6 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
     story.seed = seed;
     snprintf(story.scenarioId, sizeof(story.scenarioId), "FST_%04X", (unsigned int)(seed & 0xFFFF));
 
-    // 根据 Archetype 确定核心领域 Tag（彻底解决购物配机票的荒谬混搭 Bug）
     const char* categoryTag = "TRAVEL";
     if (chosenArchetype == ArchetypeID::LIMITED_TIME_PURCHASE || chosenArchetype == ArchetypeID::QUALITY_VS_COST || chosenArchetype == ArchetypeID::DUPLICATE_PURCHASE) {
         categoryTag = "PURCHASE";
@@ -208,7 +206,6 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
     snprintf(story.titleCN, sizeof(story.titleCN), "现实微场景抉择");
     snprintf(story.titleEN, sizeof(story.titleEN), "REALITY MICRO DECISION");
 
-    // 【100% 完整拼装】: Setup + Event + Constraint + Decision 确保句尾一定有清晰明确的问题！
     snprintf(story.bodyCN, sizeof(story.bodyCN), "%s%s%s%s",
              setupFrag ? setupFrag->zh : "",
              eventFrag ? eventFrag->zh : "",
@@ -221,25 +218,31 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
              constraintFrag ? constraintFrag->en : "",
              decisionFrag ? decisionFrag->en : "Facing this situation, what will you do?");
 
-    // 绑定专属行为动词选项
+    // 根据真实组装的故事领域，赋予精确定量的 6 维度计分矩阵 (绑定实际抉择因素)
     if (strcmp(categoryTag, "PURCHASE") == 0) {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "果断购买 (BUY)");
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "理性克制 (WAIT)");
         snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "BUY WITH DISCOUNT");
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "PASS & SAVE");
-        story.scenario = { DecisionType::GET, 30.0f, 70.0f, 10.0f, 70.0f, 20.0f, 10.0f, 30.0f, 85.0f, 50.0f };
+        
+        // 购物故事 6 维计分: 高 cost, 高 novelty, 高 practicalValue, 低 planning
+        story.scenario = { DecisionType::GET, 35.0f, 75.0f, 20.0f, 85.0f, 30.0f, 15.0f, 40.0f, 80.0f, 70.0f };
     } else if (strcmp(categoryTag, "WORK") == 0) {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "留下来帮 (HELP)");
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "准时下班 (LEAVE)");
         snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "STAY & HELP");
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "LEAVE ON TIME");
-        story.scenario = { DecisionType::DO, 20.0f, 40.0f, 80.0f, 70.0f, 90.0f, 70.0f, 30.0f, 60.0f, 80.0f };
+
+        // 工作故事 6 维计分: 高 social, 高 effort, 高 time, 高 practicalValue
+        story.scenario = { DecisionType::DO, 25.0f, 30.0f, 85.0f, 30.0f, 90.0f, 75.0f, 25.0f, 60.0f, 85.0f };
     } else {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "果断前往 (GO)");
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "按原计划 (STAY)");
         snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "ACCEPT & GO");
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "STICK TO PLAN");
-        story.scenario = { DecisionType::GO, 75.0f, 60.0f, 60.0f, 90.0f, 60.0f, 50.0f, 85.0f, 85.0f, 40.0f };
+
+        // 旅行故事 6 维计分: 高 risk, 高 novelty, 高 uncertainty, 高 emotionalValue
+        story.scenario = { DecisionType::GO, 75.0f, 65.0f, 70.0f, 92.0f, 60.0f, 50.0f, 85.0f, 88.0f, 45.0f };
     }
 
     return story;
