@@ -42,6 +42,46 @@ static ScenarioCategory g_currentCategory = ScenarioCategory::TRAVEL;
 static char g_currentScenarioId[24] = "FST_0001";
 static char g_currentArchetypeId[32] = "LAST_MINUTE_OPPORTUNITY";
 
+static int getSafeUTF8Break(const char* str, int maxBytes) {
+    int len = (int)strlen(str);
+    int pos = 0;
+    while (pos < maxBytes && pos < len) {
+        if (str[pos] == '\n') return pos;
+        unsigned char c = (unsigned char)str[pos];
+        int charBytes = 1;
+        if ((c & 0x80) == 0) charBytes = 1;
+        else if ((c & 0xE0) == 0xC0) charBytes = 2;
+        else if ((c & 0xE0) == 0xE0) charBytes = 3;
+        else if ((c & 0xF8) == 0xF0) charBytes = 4;
+
+        if (pos + charBytes > maxBytes) break;
+        pos += charBytes;
+    }
+    return (pos > 0) ? pos : (len > 0 ? 1 : 0);
+}
+
+static int calculateScenarioTotalLines(const UIContext& ctx) {
+    bool isCN = (ctx.lang == Language::CHINESE);
+    const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
+                            : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
+    const char* pDesc = desc;
+    int maxLineBytes = isCN ? 57 : 36;
+    int lineCount = 0;
+
+    while (*pDesc) {
+        if (*pDesc == '\n') {
+            pDesc++;
+            lineCount++;
+            continue;
+        }
+        int takeBytes = getSafeUTF8Break(pDesc, maxLineBytes);
+        if (takeBytes <= 0) break;
+        lineCount++;
+        pDesc += takeBytes;
+    }
+    return lineCount;
+}
+
 static float quinticEaseOut(float t) {
     float f = 1.0f - t;
     return 1.0f - f * f * f * f * f;
@@ -370,7 +410,6 @@ void handleInput(UIContext& ctx, KeyInput key) {
             }
             break;
 
-        // 【Phase 6E 极简 3 步提问树 Step 1: 决策意图】
         case AppState::BUILDER_INTENT: {
             if (key == KeyInput::UP) {
                 ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 5) % 6;
@@ -389,7 +428,6 @@ void handleInput(UIContext& ctx, KeyInput key) {
             break;
         }
 
-        // 【Phase 6E 极简 3 步提问树 Step 2: 关联对象/领域】
         case AppState::BUILDER_CONTEXT: {
             if (key == KeyInput::UP) {
                 ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 3) % 4;
@@ -408,7 +446,6 @@ void handleInput(UIContext& ctx, KeyInput key) {
             break;
         }
 
-        // 【Phase 6E 极简 3 步提问树 Step 3: 犹豫痛点 & 立即生成】
         case AppState::BUILDER_TENSION: {
             if (key == KeyInput::UP) {
                 ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 3) % 4;
@@ -416,7 +453,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 ctx.selectedMenuIndex = (ctx.selectedMenuIndex + 1) % 4;
             } else if (key == KeyInput::ENTER) {
                 ctx.customDecision.tensionIndex = ctx.selectedMenuIndex;
-                applyCustomScenario(ctx); // 信息充分 (isScenarioReady)，极速生成！
+                applyCustomScenario(ctx);
                 ctx.state = AppState::BUILDER_PREVIEW;
                 return;
             } else if (key == KeyInput::BACK) {
@@ -427,9 +464,17 @@ void handleInput(UIContext& ctx, KeyInput key) {
             break;
         }
 
-        case AppState::BUILDER_PREVIEW:
+        // 【彻底解决 Bug】: 根据文本实际总行数计算 maxScrollY 边界限制，绝不无限溢出！
+        case AppState::BUILDER_PREVIEW: {
+            int totalLines = calculateScenarioTotalLines(ctx);
+            int maxScrollY = (totalLines > 7) ? (totalLines - 7) * 15 : 0;
+
             if (key == KeyInput::DOWN) {
-                ctx.previewScrollY += 15;
+                if (ctx.previewScrollY + 15 <= maxScrollY) {
+                    ctx.previewScrollY += 15;
+                } else {
+                    ctx.previewScrollY = maxScrollY;
+                }
             } else if (key == KeyInput::UP) {
                 if (ctx.previewScrollY >= 15) {
                     ctx.previewScrollY -= 15;
@@ -448,6 +493,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 ctx.selectedMenuIndex = 0;
             }
             break;
+        }
 
         case AppState::YOUR_CHOICE:
             if (key == KeyInput::UP) {

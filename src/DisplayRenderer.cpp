@@ -17,13 +17,12 @@ static M5Canvas canvas(&M5Cardputer.Display);
 static uint32_t millis() { return 0; }
 #endif
 
-// 安全 UTF-8 整字对齐断行函数 (处理单行最长字节数，排除 \n 换行符)
 static int getSafeUTF8Break(const char* str, int maxBytes) {
     int len = (int)strlen(str);
     int pos = 0;
     while (pos < maxBytes && pos < len) {
         if (str[pos] == '\n') {
-            return pos; // 遇到显式换行符指针打断
+            return pos;
         }
         unsigned char c = (unsigned char)str[pos];
         int charBytes = 1;
@@ -324,7 +323,6 @@ void renderUI(const UIContext& ctx) {
             break;
         }
 
-        // 【Phase 6E 极简 3 步提问树 界面渲染】
         case AppState::BUILDER_INTENT:
         case AppState::BUILDER_CONTEXT:
         case AppState::BUILDER_TENSION: {
@@ -392,7 +390,18 @@ void renderUI(const UIContext& ctx) {
             int rawLineY = 26 - ctx.previewScrollY;
             const char* pDesc = desc;
             int maxLineBytes = isCN ? 57 : 36;
-            bool hasMoreBelow = false;
+
+            int totalLines = 0;
+            const char* pLineCount = desc;
+            while (*pLineCount) {
+                if (*pLineCount == '\n') { pLineCount++; totalLines++; continue; }
+                int tBytes = getSafeUTF8Break(pLineCount, maxLineBytes);
+                if (tBytes <= 0) break;
+                totalLines++;
+                pLineCount += tBytes;
+            }
+
+            int maxScrollY = (totalLines > 7) ? (totalLines - 7) * 15 : 0;
 
             while (*pDesc) {
                 if (*pDesc == '\n') {
@@ -411,19 +420,22 @@ void renderUI(const UIContext& ctx) {
                 if (rawLineY >= 25 && rawLineY <= 130) {
                     canvas.setCursor(6, rawLineY);
                     canvas.print(buf);
-                } else if (rawLineY > 130) {
-                    hasMoreBelow = true;
                 }
 
                 pDesc += takeBytes;
                 rawLineY += 15;
             }
 
-            if (hasMoreBelow || ctx.previewScrollY > 0) {
+            if (ctx.previewScrollY < maxScrollY) {
                 canvas.setFont(&fonts::Font0);
                 canvas.setTextColor(CYAN, BLACK);
                 canvas.setCursor(175, 5);
                 canvas.print("[v SCROLL]");
+            } else if (ctx.previewScrollY > 0 && ctx.previewScrollY >= maxScrollY) {
+                canvas.setFont(&fonts::Font0);
+                canvas.setTextColor(0x7BEF, BLACK);
+                canvas.setCursor(175, 5);
+                canvas.print("[^ TOP]");
             }
             break;
         }
