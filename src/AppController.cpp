@@ -102,7 +102,7 @@ static void calculateWhyMatch(UIContext& ctx) {
         diffs[i].diff = fabsf(userVals[i] - mbtiVals[i]);
     }
 
-    // 按差异从到大排序，挑选最相似的前 3 个维度
+    // 按差异从小到大排序，挑选最相似的前 3 个维度
     std::sort(diffs, diffs + 6, [](const DimDiff& a, const DimDiff& b) {
         return a.diff < b.diff;
     });
@@ -145,7 +145,6 @@ static void findBiggestDifferenceMBTI(const UIContext& ctx, MBTIType& outDiffMBT
 }
 
 static void triggerRandomScenario(UIContext& ctx) {
-    // 【Phase 6B: Event Fragment Engine】使用真实生活事件片段管线组装微场景
     ArchetypeID chosenArch = static_cast<ArchetypeID>(rand() % ARCHETYPE_COUNT);
     AssembledStoryScenario storyScn = assembleFragmentScenario(chosenArch);
 
@@ -518,7 +517,6 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
         case AppState::YOUR_MATCH:
             if (key == KeyInput::ENTER) {
-                // 【Phase 6A】: 按 ENTER 跳转到 AppState::WHY_MATCH 契合维度解析屏
                 ctx.state = AppState::WHY_MATCH;
                 ctx.selectedMenuIndex = 0;
             } else if (key == KeyInput::BACK) {
@@ -529,7 +527,6 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
         case AppState::WHY_MATCH:
             if (key == KeyInput::ENTER) {
-                // 按 ENTER 进入 SUMMARY 16 人格模拟分支汇总屏
                 ctx.state = AppState::SUMMARY;
                 ctx.selectedMenuIndex = 0;
             } else if (key == KeyInput::BACK) {
@@ -539,13 +536,19 @@ void handleInput(UIContext& ctx, KeyInput key) {
 
         case AppState::SUMMARY:
             if (key == KeyInput::ENTER) {
-                // 在 SUMMARY 按 ENTER 进入 AppState::EXPLORE 浏览 16 型人格
+                // 【核心修正】在 SUMMARY 进入 AppState::EXPLORE 时，固定当前雷达图为用户自己的本题决策 Profile！
                 ctx.state = AppState::EXPLORE;
                 ctx.exploreIndex = static_cast<int>(ctx.closestMBTI);
 
-                const PersonalityProfile& pProf = getMBTIProfile(ctx.results[ctx.exploreIndex].personality);
-                RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
-                startRadarAnimation(ctx, target, now);
+                ctx.currentRadar = {
+                    ctx.userProfile.risk,
+                    ctx.userProfile.novelty,
+                    ctx.userProfile.logic,
+                    ctx.userProfile.social,
+                    ctx.userProfile.planning,
+                    ctx.userProfile.practicality
+                };
+                ctx.isRadarAnimActive = false;
             } else if (key == KeyInput::BACK) {
                 ctx.state = AppState::WHY_MATCH;
             }
@@ -558,9 +561,7 @@ void handleInput(UIContext& ctx, KeyInput key) {
                 } else {
                     ctx.exploreIndex = (ctx.exploreIndex + 1) % 16;
                 }
-                const PersonalityProfile& pProf = getMBTIProfile(ctx.results[ctx.exploreIndex].personality);
-                RadarData target = { pProf.risk, pProf.novelty, pProf.logic, pProf.social, pProf.planning, pProf.practicality };
-                startRadarAnimation(ctx, target, now);
+                // 【核心修正】左右切换 16 人格时，用户自己的雷达轮廓（绿线）保持冰冻稳定，绝对不去修改 ctx.currentRadar！
             } else if (key == KeyInput::ENTER) {
                 if (ctx.bootMenuMode == 1) {
                     ctx.state = AppState::BUILDER_WHO;
