@@ -53,25 +53,6 @@ static void drawSmoothAlphaTriangle(M5Canvas& canvas, int x0, int y0, int x1, in
     }
 }
 
-// 虚线绘制助手函数
-static void drawDottedLine(M5Canvas& canvas, int x0, int y0, int x1, int y1, uint16_t color) {
-    int dx = abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-    int dy = -abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-    int err = dx + dy, e2;
-    int count = 0;
-
-    while (true) {
-        if ((count / 3) % 2 == 0) {
-            canvas.drawPixel(x0, y0, color);
-        }
-        if (x0 == x1 && y0 == y1) break;
-        e2 = 2 * err;
-        if (e2 >= dy) { err += dy; x0 += sx; }
-        if (e2 <= dx) { err += dx; y0 += sy; }
-        count++;
-    }
-}
-
 void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, const RadarData& data, uint16_t lineColor, uint16_t fillColor, bool drawLabels, bool isCN) {
     float values[6] = {
         data.novelty,
@@ -184,7 +165,7 @@ void drawRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, cons
     }
 }
 
-// 【Phase 6A】双雷达叠加多边形绘制实现 (实线 YOU 绿 vs 虚线 MBTI 紫)
+// 【Phase 6A】双雷达叠加多边形绘制实现 (实线 YOU 绿 vs 紫色实线+实心点 MBTI 紫)
 void drawDualRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, const RadarData& userData, const RadarData& mbtiData, const char* mbtiName, bool drawLabels, bool isCN) {
     // 1. 优先绘制背景网格与基础设施 (基于 YOU 绘制背景 Alpha)
     drawRadarChart(canvas, centerX, centerY, radius, userData, GREEN, DARKCYAN, drawLabels, isCN);
@@ -208,34 +189,34 @@ void drawDualRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, 
         my[i] = centerY + static_cast<int>(r * sinf(angle));
     }
 
-    // 3. 【图层 4: 叠加 MBTI 点阵虚线轮廓 (改成发光霓虹紫色 MAGENTA，杜绝与背景黄色4字母混淆)】
+    // 3. 【图层 4: 叠加 MBTI 紫色实线轮廓 (MAGENTA)】
     uint16_t mbtiColor = MAGENTA;
     for (int i = 0; i < 6; ++i) {
         int next = (i + 1) % 6;
-        drawDottedLine(canvas, mx[i], my[i], mx[next], my[next], mbtiColor);
+        canvas.drawLine(mx[i], my[i], mx[next], my[next], mbtiColor);
+        canvas.drawLine(mx[i] + 1, my[i], mx[next] + 1, my[next], mbtiColor);
     }
 
-    // 4. 绘制 MBTI 空心紫色顶点
+    // 4. 绘制 MBTI 实体紫色圆点
     for (int i = 0; i < 6; ++i) {
-        canvas.drawCircle(mx[i], my[i], 3, mbtiColor);
+        canvas.fillCircle(mx[i], my[i], 2, mbtiColor);
     }
 
-    // 5. 【图层 5: 顶部分割线下方图例打印 (─ YOU   - - MBTI)】
-    // 移至顶部分割线下方 (Y = 25)，完美避开底部“实用”顶点文字
+    // 5. 【图层 5: 右侧图表区顶部对称居中图例 (─ YOU   ─ MBTI)】
     canvas.setFont(&fonts::Font0);
     canvas.setTextSize(1);
     
-    // 实线绿线表示 YOU (X = 125 ~ 137, Y = 28)
-    canvas.drawLine(125, 28, 137, 28, GREEN);
-    canvas.fillCircle(131, 28, 2, WHITE);
+    // 实线绿线表示 YOU (X = 128 ~ 140, Y = 28)
+    canvas.drawLine(128, 28, 140, 28, GREEN);
+    canvas.fillCircle(134, 28, 2, WHITE);
     canvas.setTextColor(GREEN, BLACK);
-    canvas.setCursor(141, 25);
+    canvas.setCursor(144, 25);
     canvas.print("YOU");
 
-    // 虚线紫线表示 MBTI (X = 175 ~ 187, Y = 28)
-    drawDottedLine(canvas, 175, 28, 187, 28, mbtiColor);
-    canvas.drawCircle(181, 28, 2, mbtiColor);
+    // 实线紫线表示 MBTI (X = 176 ~ 188, Y = 28)
+    canvas.drawLine(176, 28, 188, 28, mbtiColor);
+    canvas.fillCircle(182, 28, 2, mbtiColor);
     canvas.setTextColor(mbtiColor, BLACK);
-    canvas.setCursor(191, 25);
+    canvas.setCursor(192, 25);
     canvas.print(mbtiName ? mbtiName : "MBTI");
 }
