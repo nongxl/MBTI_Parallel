@@ -123,7 +123,7 @@ void renderUI(const UIContext& ctx) {
             // 图层 1 & 2: 48px 巨幅雷达 Logo (中心点 120, 55, 统一亮绿色连线 GREEN)
             drawRadarChart(canvas, 120, 55, 48, homeData, GREEN, DARKCYAN, false, isCN);
 
-            // 图层 3: 开机三选项贴底排版
+            // 图层 3: 【开机三选项均衡等距排版】(将选项2向左平移至 X = 76，完全消除右侧重叠)
             if (isCN) {
                 canvas.setFont(&fonts::efontCN_12);
                 canvas.setTextSize(1);
@@ -134,7 +134,7 @@ void renderUI(const UIContext& ctx) {
                     canvas.setCursor(6, yPos);
                     canvas.print("> [1. 随机]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(84, yPos);
+                    canvas.setCursor(76, yPos);
                     canvas.print("  [2. 自定义]");
                     canvas.setCursor(162, yPos);
                     canvas.print("  [3. 画像]");
@@ -143,7 +143,7 @@ void renderUI(const UIContext& ctx) {
                     canvas.setCursor(6, yPos);
                     canvas.print("  [1. 随机]");
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(84, yPos);
+                    canvas.setCursor(76, yPos);
                     canvas.print("> [2. 自定义]");
                     canvas.setTextColor(0x7BEF, BLACK);
                     canvas.setCursor(162, yPos);
@@ -152,7 +152,7 @@ void renderUI(const UIContext& ctx) {
                     canvas.setTextColor(0x7BEF, BLACK);
                     canvas.setCursor(6, yPos);
                     canvas.print("  [1. 随机]");
-                    canvas.setCursor(84, yPos);
+                    canvas.setCursor(76, yPos);
                     canvas.print("  [2. 自定义]");
                     canvas.setTextColor(CYAN, BLACK);
                     canvas.setCursor(162, yPos);
@@ -168,7 +168,7 @@ void renderUI(const UIContext& ctx) {
                     canvas.setCursor(6, yPos);
                     canvas.print(">[1. RANDOM]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(84, yPos);
+                    canvas.setCursor(76, yPos);
                     canvas.print(" [2. CREATE]");
                     canvas.setCursor(162, yPos);
                     canvas.print(" [3. PROFILE]");
@@ -177,16 +177,16 @@ void renderUI(const UIContext& ctx) {
                     canvas.setCursor(6, yPos);
                     canvas.print(" [1. RANDOM]");
                     canvas.setTextColor(CYAN, BLACK);
-                    canvas.setCursor(84, yPos);
+                    canvas.setCursor(76, yPos);
                     canvas.print(">[2. CREATE]");
                     canvas.setTextColor(0x7BEF, BLACK);
-                    canvas.setCursor(168, yPos);
+                    canvas.setCursor(162, yPos);
                     canvas.print(" [3. PROFILE]");
                 } else {
                     canvas.setTextColor(0x7BEF, BLACK);
                     canvas.setCursor(6, yPos);
                     canvas.print(" [1. RANDOM]");
-                    canvas.setCursor(84, yPos);
+                    canvas.setCursor(76, yPos);
                     canvas.print(" [2. CREATE]");
                     canvas.setTextColor(CYAN, BLACK);
                     canvas.setCursor(162, yPos);
@@ -433,7 +433,6 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::SUMMARY: {
-            // 【全量恢复与美化】: 16 人格模拟分支汇总统计屏 (带有 3 色条形占比槽)
             drawHeader(isCN ? "16 人格模拟分支汇总" : "PARALLEL BRANCH SUMMARY", isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -443,7 +442,7 @@ void renderUI(const UIContext& ctx) {
             float noPct = (ctx.summary.noCount * 100.0f) / 16.0f;
             float maybePct = (ctx.summary.maybeCount * 100.0f) / 16.0f;
 
-            // 1. 同意 (YES) 柱状统计 (Y = 32)
+            // 1. 同意 (YES) 柱状统计 (Y = 34)
             canvas.setCursor(6, 34);
             canvas.setTextColor(GREEN, BLACK);
             canvas.printf(isCN ? "同意 %d人" : "YES %d", ctx.summary.yesCount);
@@ -453,7 +452,7 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(206, 34);
             canvas.printf("%.0f%%", yesPct);
 
-            // 2. 拒绝 (NO) 柱状统计 (Y = 58)
+            // 2. 拒绝 (NO) 柱状统计 (Y = 60)
             canvas.setCursor(6, 60);
             canvas.setTextColor(RED, BLACK);
             canvas.printf(isCN ? "拒绝 %d人" : "NO  %d", ctx.summary.noCount);
@@ -463,7 +462,7 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(206, 60);
             canvas.printf("%.0f%%", noPct);
 
-            // 3. 犹豫 (MAYBE) 柱状统计 (Y = 84)
+            // 3. 犹豫 (MAYBE) 柱状统计 (Y = 86)
             canvas.setCursor(6, 86);
             canvas.setTextColor(YELLOW, BLACK);
             canvas.printf(isCN ? "犹豫 %d人" : "MAY %d", ctx.summary.maybeCount);
