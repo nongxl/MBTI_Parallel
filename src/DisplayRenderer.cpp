@@ -206,7 +206,6 @@ void renderUI(const UIContext& ctx) {
         case AppState::MY_PROFILE: {
             drawHeader(isCN ? "真实长效 MBTI 画板" : "MY LONG-TERM PROFILE", isCN);
 
-            // 雷达图放大跃升至 40px
             drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -384,7 +383,6 @@ void renderUI(const UIContext& ctx) {
         case AppState::YOUR_MATCH: {
             drawHeader(isCN ? "你的决策轮廓" : "YOUR DECISION PROFILE", isCN);
             
-            // 雷达图放大跃升至 40px
             drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKGREEN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -474,14 +472,23 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(206, 86);
             canvas.printf("%.0f%%", maybePct);
 
-            // 4. 阵营分布结论概览 (Y = 110)
+            // 4. 【重构判定算法】: 100% 涵盖多阶优势阵营与占比结论 (Y = 110)
             canvas.setCursor(6, 110);
             canvas.setTextColor(CYAN, BLACK);
+
             if (ctx.summary.yesCount >= 10) {
-                canvas.print(isCN ? "主流阵营: 绝对压倒性同意" : "DOMINANT: OVERWHELMING YES");
+                canvas.print(isCN ? "主流阵营: 压倒性同意 (62%+)" : "DOMINANT: OVERWHELMING YES");
             } else if (ctx.summary.noCount >= 10) {
-                canvas.print(isCN ? "主流阵营: 绝对压倒性拒绝" : "DOMINANT: OVERWHELMING NO");
-            } else if (ctx.summary.yesCount >= 6 && ctx.summary.noCount >= 6) {
+                canvas.print(isCN ? "主流阵营: 压倒性拒绝 (62%+)" : "DOMINANT: OVERWHELMING NO");
+            } else if (ctx.summary.maybeCount >= 10) {
+                canvas.print(isCN ? "主流阵营: 压倒性犹豫 (62%+)" : "DOMINANT: OVERWHELMING MAYBE");
+            } else if (ctx.summary.yesCount >= 8) {
+                canvas.print(isCN ? "主流阵营: 优势倾向同意" : "MAJORITY: TENDS TO YES");
+            } else if (ctx.summary.noCount >= 8) {
+                canvas.print(isCN ? "主流阵营: 优势倾向拒绝" : "MAJORITY: TENDS TO NO");
+            } else if (ctx.summary.maybeCount >= 8) {
+                canvas.print(isCN ? "主流阵营: 优势倾向犹豫" : "MAJORITY: TENDS TO MAYBE");
+            } else if (ctx.summary.yesCount >= 5 && ctx.summary.noCount >= 5) {
                 canvas.print(isCN ? "阵营格局: 剧烈意见撕裂分歧" : "STATUS: INTENSELY SPLIT");
             } else {
                 canvas.print(isCN ? "阵营格局: 观点分布较为多元" : "STATUS: DIVERSED VIEWS");
@@ -495,14 +502,11 @@ void renderUI(const UIContext& ctx) {
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle, isCN);
 
-            // 【雷达图放大跃升至 40px】
             drawRadarChart(canvas, 180, 68, 40, ctx.currentRadar, GREEN, DARKCYAN, true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
-            // 【极客 15px 统一等距行高节奏】
-            // 行 1: 选择 (Y = 26)
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(6, 26);
@@ -523,7 +527,6 @@ void renderUI(const UIContext& ctx) {
             }
             canvas.print(decName);
 
-            // 行 2: 得分 (Y = 41, 差 15px)
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
@@ -532,12 +535,10 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 41);
             canvas.printf(isCN ? "得分: %.1f" : "Score : %.1f", res.score);
 
-            // 行 3: 依据 (Y = 56, 差 15px)
             canvas.setCursor(6, 56);
             canvas.setTextColor(CYAN, BLACK);
             canvas.print(isCN ? "依据:" : "Reason:");
 
-            // 行 4 ~ 7: 依据正文 (Y = 71, 86, 101, 116，统一 15px 行高，改为 WHITE 纯白高亮)
             const char* pReason = isCN ? getDecisionReasonCN(res.reason) : res.reason;
             int lineY = 71;
             while (*pReason && lineY <= 116) {
@@ -549,9 +550,9 @@ void renderUI(const UIContext& ctx) {
                 pReason += takeBytes;
 
                 canvas.setCursor(6, lineY);
-                canvas.setTextColor(WHITE, BLACK); // 依据正文改为 WHITE 纯白
+                canvas.setTextColor(WHITE, BLACK);
                 canvas.print(lineBuf);
-                lineY += 15; // 统一 15px 极客行高
+                lineY += 15;
             }
             break;
         }
