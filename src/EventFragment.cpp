@@ -3,9 +3,9 @@
 #include <cstdio>
 #include <cstring>
 
-// ---------------- [50+ 丰富多元现实生活 Event Fragment 数据库 (带 Phase 6C 事实 + Phase 6D 底层机制)] ----------------
+// ---------------- [全量补齐 50+ 现实生活 Event Fragment 数据库 (全矩阵 Tension 约束覆盖)] ----------------
 static const EventFragment g_fragmentBank[] = {
-    // ==== [1. TRAVEL & ADVENTURE (旅行/探险组 - 机制: OPPORTUNITY_COST / UNCERTAINTY)] ====
+    // ==== [1. TRAVEL & ADVENTURE (旅行/探险组)] ====
     {
         "SETUP_TRAVEL_REST_01", FragmentType::SETUP,
         "你原本打算这个周末待在家里，把最近一直没空看的那几本书读完。",
@@ -28,9 +28,34 @@ static const EventFragment g_fragmentBank[] = {
         { TransportMode::FLIGHT, CostType::FLIGHT_TICKET, ExistingPlan::NONE },
         DecisionMechanism::UNCERTAINTY
     },
+    // Travel - Tension 0: 耽误原计划
+    {
+        "CONSTRAINT_TRAVEL_PLAN_01", FragmentType::CONSTRAINT,
+        "但这会完全打乱你原本安排好的安静周末，让你没有时间休息与阅读。",
+        "However, this completely disrupts your planned quiet weekend for reading.",
+        { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::OPPORTUNITY_VS_REST }, 2,
+        { "TRAVEL", "PLAN_DISRUPT" }, 10, 30,
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::STAY_HOME },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::OPPORTUNITY_COST
+    },
+    // Travel - Tension 1: 不好拒绝
+    {
+        "CONSTRAINT_TRAVEL_SOCIAL_02", FragmentType::CONSTRAINT,
+        "老同学表现得非常热情和期待，如果你拒绝可能会让气氛有些尴尬。",
+        "Your classmate is eager; declining might make the atmosphere awkward.",
+        { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::SOCIAL_INVITATION }, 2,
+        { "TRAVEL", "SOCIAL" }, 10, 30,
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::SOCIAL_EXPECTATION
+    },
+    // Travel - Tension 2: 花钱/路费开销
     {
         "CONSTRAINT_SELF_DRIVE_FUEL_02", FragmentType::CONSTRAINT,
-        "不过全程往返的油费和高速过路费需要大家平摊，而且需要你帮忙轮流开一部分车程。",
+        "全程往返的油费和过路费需要大家平摊，而且你需要帮忙轮流开一部分车程。",
         "However, fuel & toll fees will be shared, and you need to share driving duties.",
         { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::OPPORTUNITY_VS_REST }, 2,
         { "TRAVEL", "DRIVE_COST" }, 10, 30,
@@ -38,6 +63,18 @@ static const EventFragment g_fragmentBank[] = {
         { TransportMode::SELF_DRIVE, CostType::FUEL, ExistingPlan::NONE },
         { TransportMode::FLIGHT, CostType::FLIGHT_TICKET, ExistingPlan::NONE },
         DecisionMechanism::RESOURCE_ALLOCATION
+    },
+    // Travel - Tension 3: 细节不了解/不知道值不值
+    {
+        "CONSTRAINT_TRAVEL_UNCERTAIN_03", FragmentType::CONSTRAINT,
+        "你对那座海边小镇的天气与行程安排完全不了解，不知道折腾一趟会不会值。",
+        "You know little about the coastal town weather or schedule, unsure if it's worth it.",
+        { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::KNOWN_VS_UNKNOWN }, 2,
+        { "TRAVEL", "UNCERTAIN" }, 10, 30,
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::TIME, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::UNCERTAINTY
     },
     {
         "DECISION_TRAVEL_GO_01", FragmentType::DECISION_FRAME,
@@ -51,50 +88,75 @@ static const EventFragment g_fragmentBank[] = {
         DecisionMechanism::REVERSIBILITY
     },
 
-    // ==== [2. LOW-STAKES DAILY (日常轻度决策 - 机制: LOW_STAKES_DAILY / THRESHOLD)] ====
+    // ==== [2. PURCHASE & MONEY (购物/理财/旧设备组)] ====
     {
-        "SETUP_DAILY_COFFEE_01", FragmentType::SETUP,
-        "在午后工作间隙，你习惯性地走进楼下的精选咖啡馆准备点一杯午后饮料。",
-        "During a work break, you walked into the coffee shop downstairs for a drink.",
-        { ArchetypeID::KNOWN_VS_UNKNOWN, ArchetypeID::QUALITY_VS_COST }, 2,
-        { "DAILY", "COFFEE" }, 10, 30,
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        DecisionMechanism::LOW_STAKES_DAILY
-    },
-    {
-        "EVENT_COFFEE_NEW_BEVERAGE_01", FragmentType::EVENT,
-        "收银台前推出了一款口味奇异的特调新品，而你平常常喝的拿铁刚好在做经典打折。",
-        "They launched a strange new special beverage alongside your usual classic latte on sale.",
-        { ArchetypeID::KNOWN_VS_UNKNOWN, ArchetypeID::QUALITY_VS_COST }, 2,
-        { "DAILY", "SPECIAL" }, 10, 30,
+        "SETUP_PURCHASE_SAVINGS_01", FragmentType::SETUP,
+        "在整理房间和书桌时，你正思考着是否要升级自己日常高频使用的装备。",
+        "While cleaning your room, you considered upgrading your daily essential gear.",
+        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::QUALITY_VS_COST, ArchetypeID::DUPLICATE_PURCHASE }, 3,
+        { "PURCHASE", "PLAN" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        DecisionMechanism::LOW_STAKES_DAILY
+        DecisionMechanism::QUALITY_VS_COST
     },
     {
-        "CONSTRAINT_COFFEE_RISK_01", FragmentType::CONSTRAINT,
-        "新品口碑两极分化严重，有人觉得风味惊艳，也有人觉得口感奇怪难以接受。",
-        "Reviews for the new flavor are polar, some love it while others hate it.",
-        { ArchetypeID::KNOWN_VS_UNKNOWN, ArchetypeID::RISK_VS_CERTAINTY }, 2,
-        { "DAILY", "RISK" }, 10, 30,
+        "EVENT_GADGET_DISCOUNT_01", FragmentType::EVENT,
+        "你看中的那款旗舰便携设备今天刚好限时打折，价格相当吸引人。",
+        "The flagship portable gadget you tracked is suddenly on limited-time discount.",
+        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::QUALITY_VS_COST }, 2,
+        { "PURCHASE", "DISCOUNT" }, 10, 30,
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::QUALITY_VS_COST
+    },
+    // Purchase - Tension 0: 旧的还能用 / 花钱
+    {
+        "CONSTRAINT_PURCHASE_OLD_WORKS_01", FragmentType::CONSTRAINT,
+        "虽然新设备体验很好，但你手上现有的旧设备依然能正常使用，买新的意味着额外花钱。",
+        "Though the new device is great, your old one still works fine; buying costs extra.",
+        { ArchetypeID::DUPLICATE_PURCHASE, ArchetypeID::QUALITY_VS_COST }, 2,
+        { "PURCHASE", "OLD_WORKS" }, 10, 30,
+        { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::THRESHOLD
+    },
+    // Purchase - Tension 1: 性价比不高
+    {
+        "CONSTRAINT_PURCHASE_PRICE_02", FragmentType::CONSTRAINT,
+        "虽然新特性很吸引人，但它的售价偏高，相较于提升的效率显得性价比一般。",
+        "New features are cool, but the price tag is high relative to actual utility.",
+        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::QUALITY_VS_COST }, 2,
+        { "PURCHASE", "RATIO" }, 10, 30,
+        { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::BUDGET, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::QUALITY_VS_COST
+    },
+    // Purchase - Tension 3: 一时冲动/不知道值不值得
+    {
+        "CONSTRAINT_PURCHASE_IMPULSE_03", FragmentType::CONSTRAINT,
+        "你担心自己只是一时新鲜冲动消费，买回家后可能用不了几次就会吃灰。",
+        "You worry it's an impulse buy that will end up gathering dust on your shelf.",
+        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::DUPLICATE_PURCHASE }, 2,
+        { "PURCHASE", "IMPULSE" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         DecisionMechanism::UNCERTAINTY
     },
     {
-        "DECISION_COFFEE_TRY_01", FragmentType::DECISION_FRAME,
-        "面对这款风险与惊喜并存的新品，你会选择尝试探险吗？",
-        "Will you choose to try this adventurous new flavor drink?",
-        { ArchetypeID::KNOWN_VS_UNKNOWN, ArchetypeID::RISK_VS_CERTAINTY }, 2,
-        { "DAILY", "TRY" }, 10, 10,
+        "DECISION_PURCHASE_BUY_01", FragmentType::DECISION_FRAME,
+        "面对这个难得的限时折扣，你会选择现在下单购买吗？",
+        "Faced with this discount, will you choose to buy it now?",
+        { ArchetypeID::LIMITED_TIME_PURCHASE, ArchetypeID::DUPLICATE_PURCHASE }, 2,
+        { "PURCHASE", "BUY" }, 10, 10,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
-        DecisionMechanism::LOW_STAKES_DAILY
+        DecisionMechanism::QUALITY_VS_COST
     },
 
     // ==== [3. WORK & CAREER (职场/协作组)] ====
@@ -120,10 +182,35 @@ static const EventFragment g_fragmentBank[] = {
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
         DecisionMechanism::SOCIAL_EXPECTATION
     },
+    // Work - Tension 0: 耽误原计划
     {
-        "CONSTRAINT_WORK_UNCERTAIN_02", FragmentType::CONSTRAINT,
-        "但你对该项目的具体背景和活动细节完全不了解，无法预估要花多少精力和时间，也不知道是否值得。",
-        "However, you know little about project details, unsure of time/energy required or if it's worth it.",
+        "CONSTRAINT_WORK_OVERTIME_01", FragmentType::CONSTRAINT,
+        "但这需要你今晚额外加班至少1.5小时，还会耽误你原本安排好的晚餐约会。",
+        "However, helping out will cost 1.5 hours overtime and delay your dinner date.",
+        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
+        { "WORK", "OVERTIME" }, 10, 30,
+        { TransportMode::UNKNOWN, CostType::OVERTIME, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::OVERTIME, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::OPPORTUNITY_COST
+    },
+    // Work - Tension 1: 不好拒绝 / 顾及人情
+    {
+        "CONSTRAINT_WORK_SOCIAL_02", FragmentType::CONSTRAINT,
+        "同事平时和你关系不错且表现得很焦急，直接拒绝可能会伤害人际关系。",
+        "The coworker is a good friend who looks anxious; refusing might hurt your bond.",
+        { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
+        { "WORK", "RELATION" }, 10, 30,
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
+        DecisionMechanism::SOCIAL_EXPECTATION
+    },
+    // Work - Tension 3: 细节不了解 / 不知道值不值得
+    {
+        "CONSTRAINT_WORK_UNCERTAIN_03", FragmentType::CONSTRAINT,
+        "你对该项目的具体背景和活动细节完全不了解，无法预估要花多少精力，也不知道是否值得。",
+        "You know little about project details, unsure of time/energy required or if it's worth it.",
         { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::HELP_VS_BOUNDARY }, 2,
         { "WORK", "UNCERTAIN" }, 10, 30,
         { TransportMode::UNKNOWN, CostType::NONE, ExistingPlan::NONE },
@@ -274,12 +361,21 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
              constraintFrag ? constraintFrag->en : "",
              decisionFrag ? decisionFrag->en : "Facing this situation, what will you do?");
 
+    // 【核心动态平衡】: 根据抽取的 CONSTRAINT 片段的底层机制，建立具有强大 16 人格对抗分歧的属性矩阵！
+    DecisionMechanism activeMechanism = constraintFrag ? constraintFrag->mechanism : story.mechanism;
+
     if (strcmp(categoryTag, "PURCHASE") == 0) {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "果断购买 (BUY)");
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "理性克制 (WAIT)");
         snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "BUY WITH DISCOUNT");
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "PASS & SAVE");
-        story.scenario = { DecisionType::GET, 35.0f, 75.0f, 20.0f, 85.0f, 30.0f, 15.0f, 40.0f, 80.0f, 70.0f };
+
+        if (activeMechanism == DecisionMechanism::THRESHOLD || activeMechanism == DecisionMechanism::QUALITY_VS_COST) {
+            // 旧的还能用 / 花钱: 高花费 cost=85, 高实用性限制 practical=85
+            story.scenario = { DecisionType::GET, 85.0f, 65.0f, 40.0f, 85.0f, 30.0f, 15.0f, 75.0f, 80.0f, 70.0f };
+        } else {
+            story.scenario = { DecisionType::GET, 45.0f, 75.0f, 30.0f, 85.0f, 30.0f, 15.0f, 40.0f, 80.0f, 70.0f };
+        }
     } else if (strcmp(categoryTag, "DAILY") == 0) {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "尝试新品 (TRY)");
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "经典稳妥 (STAY)");
@@ -291,15 +387,29 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "准时下班 (LEAVE)");
         snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "STAY & HELP");
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "LEAVE ON TIME");
-        
-        // 【关键修复】: 动态平衡 WORK 场景中的不确定性风险 (Risk/Uncertainty=85) 与人际压力，产生精彩的 16 人格激战分歧！
-        story.scenario = { DecisionType::DO, 75.0f, 85.0f, 85.0f, 30.0f, 35.0f, 80.0f, 25.0f, 70.0f, 75.0f };
+
+        if (activeMechanism == DecisionMechanism::UNCERTAINTY) {
+            // 痛点 3: 对细节不了解，不知道值不值 -> 高 risk=85, 高 complexity=80
+            story.scenario = { DecisionType::DO, 75.0f, 85.0f, 85.0f, 30.0f, 35.0f, 80.0f, 25.0f, 70.0f, 75.0f };
+        } else if (activeMechanism == DecisionMechanism::OPPORTUNITY_COST) {
+            // 痛点 0: 耽误原计划/加班 -> 高 opportunityCost=85, 高 timePressure=80
+            story.scenario = { DecisionType::DO, 65.0f, 40.0f, 80.0f, 25.0f, 40.0f, 85.0f, 30.0f, 75.0f, 80.0f };
+        } else {
+            // 痛点 1: 人情不好拒绝 -> 高 socialPressure=90
+            story.scenario = { DecisionType::DO, 30.0f, 35.0f, 70.0f, 30.0f, 90.0f, 75.0f, 25.0f, 60.0f, 85.0f };
+        }
     } else {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "果断前往 (GO)");
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "按原计划 (STAY)");
         snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "ACCEPT & GO");
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "STICK TO PLAN");
-        story.scenario = { DecisionType::GO, 75.0f, 65.0f, 70.0f, 92.0f, 60.0f, 50.0f, 85.0f, 88.0f, 45.0f };
+
+        if (activeMechanism == DecisionMechanism::OPPORTUNITY_COST) {
+            // 痛点 0: 打乱原居家计划 -> 高 opportunityCost=85, 高 timePressure=80
+            story.scenario = { DecisionType::GO, 65.0f, 50.0f, 80.0f, 85.0f, 45.0f, 85.0f, 75.0f, 80.0f, 60.0f };
+        } else {
+            story.scenario = { DecisionType::GO, 75.0f, 65.0f, 70.0f, 92.0f, 60.0f, 50.0f, 85.0f, 88.0f, 45.0f };
+        }
     }
 
     DecisionSignature sig = { static_cast<uint8_t>(story.category), story.mechanism, DecisionShape::YES_NO };

@@ -53,6 +53,7 @@ const char* getTensionNameCN(DecisionIntent intent, int index) {
 void buildCustomScenarioState(const CustomDecisionState& customState, ScenarioState& outState, ScenarioCategory& outCategory, ArchetypeID& outArchetype) {
     outState.reset();
 
+    // 1. 动态确定 Category 与 Archetype
     if (customState.intent == DecisionIntent::BUY_OR_NOT) {
         outCategory = ScenarioCategory::PURCHASE;
         outArchetype = (customState.tensionIndex == 0) ? ArchetypeID::DUPLICATE_PURCHASE : ArchetypeID::LIMITED_TIME_PURCHASE;
@@ -71,5 +72,30 @@ void buildCustomScenarioState(const CustomDecisionState& customState, ScenarioSt
         outCategory = ScenarioCategory::WORK;
         outArchetype = ArchetypeID::KNOWN_VS_UNKNOWN;
         outState.existingPlan = ExistingPlan::REST;
+    }
+
+    // 2. 将选定的 Tension 全量映射至标准 ScenarioState
+    switch (customState.tensionIndex) {
+        case 0: // 耽误原计划 / 机会成本
+            outState.isPlanLocked = true;
+            if (outState.existingPlan == ExistingPlan::NONE) {
+                outState.existingPlan = ExistingPlan::STAY_HOME;
+            }
+            break;
+
+        case 1: // 不好拒绝 / 人际期待与边界
+            outState.isPlanLocked = true;
+            outState.existingPlan = ExistingPlan::REST;
+            break;
+
+        case 2: // 旧的还能用 / 花不少钱 / 预算控制
+            outState.isCostLocked = true;
+            outState.costType = CostType::BUDGET;
+            break;
+
+        case 3: // 对细节不了解 / 不知道值不值得 / 不确定性
+            outState.isCostLocked = true;
+            outState.costType = CostType::TIME;
+            break;
     }
 }

@@ -16,6 +16,7 @@ enum class DecisionMechanism {
     RECIPROCITY,              // 人情与回报
     BOUNDARY,                 // 个人边界
     QUALITY_VS_QUANTITY,      // 品质 vs 数量
+    QUALITY_VS_COST,          // 品质 vs 价格/性价比
     SHORT_TERM_VS_LONG_TERM,  // 短期收益 vs 长期效益
     PRINCIPLE_VS_CONVENIENCE, // 原则 vs 便利
     RESOURCE_ALLOCATION,      // 时间/精力/资源分配
