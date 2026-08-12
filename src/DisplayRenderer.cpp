@@ -206,11 +206,11 @@ void renderUI(const UIContext& ctx) {
         case AppState::MY_PROFILE: {
             drawHeader(isCN ? "真实长效 MBTI 画板" : "MY LONG-TERM PROFILE", isCN);
 
-            // 【图层 0 最底层】: MBTI 4 字母背景发光大字 (如 INTP)
+            // 【图层 0 最底层】: 升级至 Size 4 巨幅 MBTI 发光水印 (坐标 132, 52)
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
-            canvas.setTextSize(3);
-            canvas.setCursor(144, 56);
+            canvas.setTextSize(4);
+            canvas.setCursor(132, 52);
             canvas.print(getMBTIName(ctx.userHistory.dominantMBTI));
 
             // 【图层 1 & 2】: 半透明雷达图 Overlay
@@ -219,31 +219,22 @@ void renderUI(const UIContext& ctx) {
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
+            // 【左侧去冗余，统一 20px 行高舒展排版】
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
             canvas.setCursor(6, 28);
             canvas.print(isCN ? "收敛真实人格:" : "LONG-TERM MBTI:");
 
-            canvas.setFont(&fonts::Font0);
-            canvas.setTextSize(2);
-            canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(6, 43);
-            canvas.print(getMBTIName(ctx.userHistory.dominantMBTI));
-
-            if (isCN) canvas.setFont(&fonts::efontCN_12);
-            else canvas.setFont(&fonts::Font0);
-
-            canvas.setTextSize(1);
             canvas.setTextColor(CYAN, BLACK);
-            canvas.setCursor(6, 64);
+            canvas.setCursor(6, 48);
             canvas.printf(isCN ? "置信度: %.1f%%" : "Confid : %.1f%%", ctx.userHistory.dominantSimilarity);
 
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(6, 82);
+            canvas.setCursor(6, 68);
             canvas.printf(isCN ? "已测场数: %d 场" : "Tested : %d", ctx.userHistory.totalPlays);
 
             canvas.setTextColor(0x7BEF, BLACK);
-            canvas.setCursor(6, 100);
+            canvas.setCursor(6, 88);
             canvas.printf(isCN ? "同意%d 拒绝%d 犹豫%d" : "Y:%d N:%d M:%d",
                           ctx.userHistory.yesCount, ctx.userHistory.noCount, ctx.userHistory.maybeCount);
             break;
@@ -402,11 +393,11 @@ void renderUI(const UIContext& ctx) {
         case AppState::YOUR_MATCH: {
             drawHeader(isCN ? "你的决策轮廓" : "YOUR DECISION PROFILE", isCN);
             
-            // 【图层 0 最底层】: MBTI 4 字母背景发光大字 (如 INTJ)
+            // 【图层 0 最底层】: 升级至 Size 4 巨幅 MBTI 发光水印 (坐标 132, 52)
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
-            canvas.setTextSize(3);
-            canvas.setCursor(144, 56);
+            canvas.setTextSize(4);
+            canvas.setCursor(132, 52);
             canvas.print(getMBTIName(ctx.closestMBTI));
 
             // 【图层 1 & 2】: 半透明雷达图 Overlay
@@ -529,11 +520,11 @@ void renderUI(const UIContext& ctx) {
             snprintf(headerTitle, sizeof(headerTitle), "< %s > (%d/16)", getMBTIName(res.personality), ctx.exploreIndex + 1);
             drawHeader(headerTitle, isCN);
 
-            // 【图层 0 最底层】: 16 人格实时动态 MBTI 4 字母背景发光大字 (如 INFJ / ENTP)
+            // 【图层 0 最底层】: 升级至 Size 4 巨幅 MBTI 4 字母发光水印 (坐标 132, 52)
             canvas.setFont(&fonts::Font0);
             canvas.setTextColor(YELLOW, BLACK);
-            canvas.setTextSize(3);
-            canvas.setCursor(144, 56);
+            canvas.setTextSize(4);
+            canvas.setCursor(132, 52);
             canvas.print(getMBTIName(res.personality));
 
             // 【图层 1 & 2】: 半透明雷达图 Overlay 覆盖在 MBTI 四字母上方
