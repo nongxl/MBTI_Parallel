@@ -15,7 +15,7 @@ static const EventFragment g_fragmentBank[] = {
     },
     {
         "SETUP_WORK_OFF_01", FragmentType::SETUP,
-        "下班前 10 分钟，你正收拾好东西准备准时回家享受夜晚。",
+        "下班前10分钟，你正收拾好东西准备准时回家享受夜晚。",
         "10 minutes before off-work, you packed your bag getting ready to head home.",
         { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::NOW_VS_LATER, ArchetypeID::HELP_VS_BOUNDARY }, 3,
         { "WORK", "OFF_WORK", "ROUTINE" }, 10, 15
@@ -70,14 +70,14 @@ static const EventFragment g_fragmentBank[] = {
     // ---- [4. CONSTRAINT 现实拉扯片段] ----
     {
         "CONSTRAINT_EXPENSE_TOMORROW_01", FragmentType::CONSTRAINT,
-        "不过往返机票费用需要你自己承担，而且明早 6 点就要准备出发。",
+        "不过往返机票费用需要你自己承担，而且明早6点就要准备出发。",
         "However, you must cover your own ticket, and departure is at 6 AM tomorrow.",
         { ArchetypeID::LAST_MINUTE_OPPORTUNITY, ArchetypeID::OPPORTUNITY_VS_REST }, 2,
         { "COST", "MORNING", "TIME_PRESSURE" }, 10, 15
     },
     {
         "CONSTRAINT_WORK_DEADLINE_01", FragmentType::CONSTRAINT,
-        "但这需要你今晚牺牲至少 2 小时的私人时间，明早还要早起开会。",
+        "但这需要你今晚牺牲至少2小时的私人时间，明早还要早起开会。",
         "This requires sacrificing 2 hours tonight, with an early morning meeting tomorrow.",
         { ArchetypeID::UNEXPECTED_REQUEST, ArchetypeID::NOW_VS_LATER }, 2,
         { "TIME", "OVERTIME", "PRESSURE" }, 10, 15
@@ -151,7 +151,6 @@ static const EventFragment* pickFragment(FragmentType type, ArchetypeID archetyp
     }
 
     if (count == 0) {
-        // 退回无 Cooldown 筛选
         for (int i = 0; i < FRAGMENT_BANK_SIZE; ++i) {
             if (g_fragmentBank[i].type == type) {
                 candidates[count++] = &g_fragmentBank[i];
@@ -178,29 +177,23 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
 
     const EventFragment* setupFrag = pickFragment(FragmentType::SETUP, chosenArchetype);
     const EventFragment* eventFrag = pickFragment(FragmentType::EVENT, chosenArchetype);
-    const EventFragment* contextFrag = pickFragment(FragmentType::CONTEXT, chosenArchetype);
     const EventFragment* constraintFrag = pickFragment(FragmentType::CONSTRAINT, chosenArchetype);
-    const EventFragment* decisionFrag = pickFragment(FragmentType::DECISION_FRAME, chosenArchetype);
 
     story.category = ScenarioCategory::TRAVEL;
 
     snprintf(story.titleCN, sizeof(story.titleCN), "现实微场景抉择");
     snprintf(story.titleEN, sizeof(story.titleEN), "REALITY MICRO DECISION");
 
-    // 【Narrative Pattern 组装管线】: Setup -> Event -> Context -> Constraint -> Decision
-    snprintf(story.bodyCN, sizeof(story.bodyCN), "%s\n%s\n%s %s\n%s",
-             setupFrag ? setupFrag->zh : "周五晚上，你正在安排周末。",
-             eventFrag ? eventFrag->zh : "朋友突然告诉你有一个难得的机会。",
-             contextFrag ? contextFrag->zh : "你其实对此很感兴趣，",
-             constraintFrag ? constraintFrag->zh : "但需要你牺牲原本的计划安排。",
-             decisionFrag ? decisionFrag->zh : "你会选择前往吗？");
+    // 【连贯极简拼装】: 无硬回车，自然断句拼装
+    snprintf(story.bodyCN, sizeof(story.bodyCN), "%s%s%s",
+             setupFrag ? setupFrag->zh : "你原本打算这个周末待在家里。",
+             eventFrag ? eventFrag->zh : "朋友突然发消息说抢到了机票。",
+             constraintFrag ? constraintFrag->zh : "不过费用需要你自己承担。");
 
-    snprintf(story.bodyEN, sizeof(story.bodyEN), "%s %s %s %s %s",
-             setupFrag ? setupFrag->en : "On Friday night, you planned your weekend.",
-             eventFrag ? eventFrag->en : "A friend tells you about a rare opportunity.",
-             contextFrag ? contextFrag->en : "You are interested in it,",
-             constraintFrag ? constraintFrag->en : "but it requires changing your plans.",
-             decisionFrag ? decisionFrag->en : "Will you go?");
+    snprintf(story.bodyEN, sizeof(story.bodyEN), "%s %s %s",
+             setupFrag ? setupFrag->en : "You planned to spend the weekend relaxing at home.",
+             eventFrag ? eventFrag->en : "A friend messages saying he secured two cheap flights.",
+             constraintFrag ? constraintFrag->en : "However, you must cover your own ticket.");
 
     snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "果断前往 (GO)");
     snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "按原计划 (STAY)");

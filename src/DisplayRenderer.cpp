@@ -16,13 +16,14 @@ static M5Canvas canvas(&M5Cardputer.Display);
 static uint32_t millis() { return 0; }
 #endif
 
-// 安全 UTF-8 整字对齐断行函数
+// 安全 UTF-8 整字对齐断行函数 (处理单行最长字节数，排除 \n 换行符)
 static int getSafeUTF8Break(const char* str, int maxBytes) {
     int len = (int)strlen(str);
-    if (len <= maxBytes) return len;
-
     int pos = 0;
-    while (pos < maxBytes) {
+    while (pos < maxBytes && pos < len) {
+        if (str[pos] == '\n') {
+            return pos; // 遇到显式换行符立即打断本行
+        }
         unsigned char c = (unsigned char)str[pos];
         int charBytes = 1;
         if ((c & 0x80) == 0) charBytes = 1;
@@ -33,7 +34,7 @@ static int getSafeUTF8Break(const char* str, int maxBytes) {
         if (pos + charBytes > maxBytes) break;
         pos += charBytes;
     }
-    return (pos > 0) ? pos : maxBytes;
+    return (pos > 0) ? pos : (len > 0 ? 1 : 0);
 }
 
 void initDisplay() {
@@ -394,32 +395,43 @@ void renderUI(const UIContext& ctx) {
             const char* titleTxt = isCN ? (ctx.currentScenarioTitleCN[0] ? ctx.currentScenarioTitleCN : "离线情境")
                                         : (ctx.currentScenarioTitle[0] ? ctx.currentScenarioTitle : "SCENARIO");
             
-            int titleY = 25;
-            const char* pTitle = titleTxt;
-            while (*pTitle && titleY <= 38) {
-                char tBuf[64] = {0};
-                int tBytes = getSafeUTF8Break(pTitle, isCN ? 48 : 32);
-                strncpy(tBuf, pTitle, tBytes);
-                tBuf[tBytes] = '\0';
-                canvas.setCursor(6, titleY);
-                canvas.print(tBuf);
-                pTitle += tBytes;
-                titleY += 15;
-            }
+            // 绘制标题大字
+            canvas.setCursor(6, 25);
+            char tBuf[64] = {0};
+            int tBytes = getSafeUTF8Break(titleTxt, isCN ? 57 : 36);
+            strncpy(tBuf, titleTxt, tBytes);
+            tBuf[tBytes] = '\0';
+            canvas.print(tBuf);
 
             canvas.setTextColor(WHITE, BLACK);
             const char* desc = isCN ? (ctx.currentScenarioDescCN[0] ? ctx.currentScenarioDescCN : "")
                                     : (ctx.currentScenarioDesc[0] ? ctx.currentScenarioDesc : "");
             
-            int lineY = titleY + 2;
-            while (*desc && lineY <= 122) {
+            // 【神级修复】精准控制单行最大 57 字节 (19 个汉字，充分填满 228 像素显示宽度，绝不早换行)
+            // 手动过滤与消费 \n 换行符，由外层循环统一严格管理 lineY += 15，彻底解决上下重叠与尾部切除！
+            int lineY = 42;
+            const char* pDesc = desc;
+            int maxLineBytes = isCN ? 57 : 36; // 19 个汉字 = 57 字节 (19 * 12px = 228px，完美占满 240px 屏幕)
+
+            while (*pDesc && lineY <= 122) {
+                // 如果遇到显式 \n 换行符，消费掉它并下移一行
+                if (*pDesc == '\n') {
+                    pDesc++;
+                    lineY += 15;
+                    continue;
+                }
+
                 char buf[64] = {0};
-                int takeBytes = getSafeUTF8Break(desc, isCN ? 48 : 32);
-                strncpy(buf, desc, takeBytes);
+                int takeBytes = getSafeUTF8Break(pDesc, maxLineBytes);
+                if (takeBytes <= 0) break;
+
+                strncpy(buf, pDesc, takeBytes);
                 buf[takeBytes] = '\0';
+
                 canvas.setCursor(6, lineY);
                 canvas.print(buf);
-                desc += takeBytes;
+
+                pDesc += takeBytes;
                 lineY += 15;
             }
             break;
