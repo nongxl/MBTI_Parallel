@@ -294,12 +294,12 @@ void renderUI(const UIContext& ctx) {
                 for (int i = 0; i < 6; ++i) items[i] = getTensionName(static_cast<TensionType>(i), isCN);
             }
 
-            // 【自定义 4 步构造屏: 立体发光选框 + 大字全屏充盈填满】
+            // 【彻底去除底框】: 恢复极致干练的纯黑背景与极客发光文字高亮
             for (int i = 0; i < count; ++i) {
                 int col = i % 2;
                 int row = i / 2;
                 int x = (col == 0) ? 8 : 124;
-                int y = 30 + row * 32;
+                int y = 34 + row * 32;
 
                 if (isCN) {
                     canvas.setFont(&fonts::efontCN_12);
@@ -309,18 +309,13 @@ void renderUI(const UIContext& ctx) {
                     canvas.setTextSize(1);
                 }
 
+                canvas.setCursor(x, y);
                 if (i == ctx.selectedMenuIndex) {
-                    // 选中项: 填充亮青色底框，纯黑大字高亮反显
-                    canvas.fillRect(x - 2, y - 2, 108, 22, CYAN);
-                    canvas.setTextColor(BLACK, CYAN);
-                    canvas.setCursor(x + 2, y + 3);
-                    canvas.printf("%s %s", icons[i % 6], items[i]);
+                    canvas.setTextColor(CYAN, BLACK);
+                    canvas.printf("> %s %s", icons[i % 6], items[i]);
                 } else {
-                    // 未选中项: 绘制暗灰色边框，白色文字
-                    canvas.drawRect(x - 2, y - 2, 108, 22, DARKGREY);
                     canvas.setTextColor(WHITE, BLACK);
-                    canvas.setCursor(x + 2, y + 3);
-                    canvas.printf("%s %s", icons[i % 6], items[i]);
+                    canvas.printf("  %s %s", icons[i % 6], items[i]);
                 }
             }
             break;
@@ -343,7 +338,6 @@ void renderUI(const UIContext& ctx) {
             const char* pTitle = titleTxt;
             while (*pTitle && titleY <= 38) {
                 char tBuf[64] = {0};
-                // 单行限制 48 字节 (16 汉字)，两端留足 38px 绝对防剪裁屏障
                 int tBytes = getSafeUTF8Break(pTitle, isCN ? 48 : 32);
                 strncpy(tBuf, pTitle, tBytes);
                 tBuf[tBytes] = '\0';
@@ -361,14 +355,13 @@ void renderUI(const UIContext& ctx) {
             int lineY = titleY + 4;
             while (*desc && lineY <= 118) {
                 char buf[64] = {0};
-                // 单行限制 48 字节 (16 汉字)，彻底消除右侧切边残缺！
                 int takeBytes = getSafeUTF8Break(desc, isCN ? 48 : 32);
                 strncpy(buf, desc, takeBytes);
                 buf[takeBytes] = '\0';
                 canvas.setCursor(10, lineY);
                 canvas.print(buf);
                 desc += takeBytes;
-                lineY += 18; // 18px 极客充盈行高
+                lineY += 18;
             }
             break;
         }
