@@ -40,20 +40,20 @@ An offline, cyberpunk-styled pocket decision simulation instrument for **M5Stack
 
 ```mermaid
 flowchart TD
-    Start[Boot Language Select / i18n] --> HOME[HOME Screen: Dynamic Dual Radar Logo]
+    Start["Boot Language Select / i18n"] --> HOME["HOME Screen: Dynamic Dual Radar Logo"]
     
-    HOME -->|Option 1: RANDOM| Gen[Procedural Scenario Generator]
-    HOME -->|Option 2: CREATE| Build[Custom Scenario Creator: 4-Step 2D Grid]
-    HOME -->|Option 3: PROFILE| Profile[Long-Term Profile Board: ESP32 NVS]
+    HOME -->|Option 1: RANDOM| Gen["Procedural Scenario Generator"]
+    HOME -->|Option 2: CREATE| Build["Custom Scenario Creator: 4-Step 2D Grid"]
+    HOME -->|Option 3: PROFILE| Profile["Long-Term Profile Board: ESP32 NVS"]
     
-    Gen --> Preview[Scenario Preview: BUILDER_PREVIEW]
+    Gen --> Preview["Scenario Preview: BUILDER_PREVIEW"]
     Build --> Preview
     
-    Preview -->|ENTER| Choice[User Decision: YOUR_CHOICE (YES / NO / MAYBE)]
-    Choice -->|ENTER| Match[Dual Radar Overlay: YOUR_MATCH (Solid YOU vs Purple MBTI)]
-    Match -->|ENTER| Why[WHY Match Breakdown: WHY_MATCH (Top 3 Aligned Axes + Dual Radar)]
-    Why -->|ENTER| Summary[16 Branch Summary: SUMMARY (3-Color Bars & Dominant Faction)]
-    Summary -->|ENTER| Explore[16 MBTI Explore: EXPLORE (Real-time Dual Radar Compare)]
+    Preview -->|ENTER| Choice["User Decision: YOUR_CHOICE (YES / NO / MAYBE)"]
+    Choice -->|ENTER| Match["Dual Radar Overlay: YOUR_MATCH (Solid YOU vs Purple MBTI)"]
+    Match -->|ENTER| Why["WHY Match Breakdown: WHY_MATCH (Top 3 Aligned Axes + Dual Radar)"]
+    Why -->|ENTER| Summary["16 Branch Summary: SUMMARY (3-Color Bars & Dominant Faction)"]
+    Summary -->|ENTER| Explore["16 MBTI Explore: EXPLORE (Real-time Dual Radar Compare)"]
     Explore -->|ENTER Quick Play| Preview
 ```
 
@@ -125,20 +125,20 @@ pio run --target upload
 
 ```mermaid
 flowchart TD
-    Start[开机语言选择 / LANGUAGE_SELECT] --> HOME[HOME 主界面: 动态双雷达 Logo]
+    Start["开机语言选择 / LANGUAGE_SELECT"] --> HOME["HOME 主界面: 动态双雷达 Logo"]
     
-    HOME -->|模式1: 随机| Gen[离线程序化场景生成器]
-    HOME -->|模式2: 自定义| Build[4 步 2D 场景构造器: WHO -> SITUATION -> CONDITION -> TENSION]
-    HOME -->|模式3: 画像| Profile[真实长效 MBTI 画板: ESP32 NVS 持久化]
+    HOME -->|模式1: 随机| Gen["离线程序化场景生成器"]
+    HOME -->|模式2: 自定义| Build["4 步 2D 场景构造器: WHO -> SITUATION -> CONDITION -> TENSION"]
+    HOME -->|模式3: 画像| Profile["真实长效 MBTI 画板: ESP32 NVS 持久化"]
     
-    Gen --> Preview[场景预览屏: BUILDER_PREVIEW]
+    Gen --> Preview["场景预览屏: BUILDER_PREVIEW"]
     Build --> Preview
     
-    Preview -->|ENTER| Choice[用户决策屏: YOUR_CHOICE (同意/拒绝/犹豫)]
-    Choice -->|ENTER| Match[决策轮廓双雷达: YOUR_MATCH (实线 YOU vs 紫实线 最像 MBTI)]
-    Match -->|ENTER| Why[维度契合解析: WHY_MATCH (最吻合 3 维度 + 右侧双雷达)]
-    Why -->|ENTER| Summary[16分支汇总: SUMMARY (3 色柱状分布 + 优势阵营判定)]
-    Summary -->|ENTER| Explore[16 人格 Compare 探索: EXPLORE (左右滑动实时双雷达对比)]
+    Preview -->|ENTER| Choice["用户决策屏: YOUR_CHOICE (同意/拒绝/犹豫)"]
+    Choice -->|ENTER| Match["决策轮廓双雷达: YOUR_MATCH (实线 YOU vs 紫实线 最像 MBTI)"]
+    Match -->|ENTER| Why["维度契合解析: WHY_MATCH (最吻合 3 维度 + 右侧双雷达)"]
+    Why -->|ENTER| Summary["16分支汇总: SUMMARY (3 色柱状分布 + 优势阵营判定)"]
+    Summary -->|ENTER| Explore["16 人格 Compare 探索: EXPLORE (左右滑动实时双雷达对比)"]
     Explore -->|ENTER 畅玩闭环| Preview
 ```
 
