@@ -512,25 +512,25 @@ void renderUI(const UIContext& ctx) {
 
             canvas.setTextSize(1);
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(6, 28);
+            canvas.setCursor(6, 26);
             canvas.print(isCN ? "本次决定更像:" : "THIS LOOKS LIKE:");
 
             canvas.setFont(&fonts::Font0);
             canvas.setTextSize(1);
             canvas.setTextColor(YELLOW, BLACK);
-            canvas.setCursor(6, 42);
+            canvas.setCursor(6, 40);
             canvas.printf("%s (%.1f%%)", getMBTIName(ctx.closestMBTI), ctx.matchSimilarity);
 
+            // 【需求 1】: 将“最大分歧”标签统一改为白色 WHITE 渲染！
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
             canvas.setTextSize(1);
-            canvas.setTextColor(0x7BEF, BLACK);
-            canvas.setCursor(6, 62);
+            canvas.setTextColor(WHITE, BLACK);
+            canvas.setCursor(6, 58);
             canvas.print(isCN ? "最大分歧:" : "BIGGEST DIFF:");
 
-            // 【彻底修复 Bug 2】: 在中文字体库下正确渲染括号内部的具体行为动词！绝对不留空白！
-            canvas.setCursor(6, 76);
+            canvas.setCursor(6, 72);
             canvas.setTextColor(RED, BLACK);
             const char* diffDecTxt = isCN ? getScenarioActionNameCN(ctx.biggestDiffDecision, ctx.currentScenario.type)
                                           : getScenarioActionNameEN(ctx.biggestDiffDecision, ctx.currentScenario.type);
@@ -543,16 +543,20 @@ void renderUI(const UIContext& ctx) {
                 canvas.printf("%s (%s)", getMBTIName(ctx.biggestDiffMBTI), diffDecTxt);
             }
 
-            // 【彻底修复 Bug 1】: 你的选择同步咬合场景专属动词 (如“果断前往”、“果断购买”)！
+            // 【需求 1 & 2】: “你的选择”标签用白色，且具体内容换至下一行 (Y=108)，同样用白色 WHITE 渲染！
             if (isCN) canvas.setFont(&fonts::efontCN_12);
             else canvas.setFont(&fonts::Font0);
 
             canvas.setTextSize(1);
-            canvas.setTextColor(CYAN, BLACK);
-            canvas.setCursor(6, 98);
+            canvas.setTextColor(WHITE, BLACK);
+            canvas.setCursor(6, 92);
+            canvas.print(isCN ? "你的选择:" : "YOUR CHOICE:");
+
+            canvas.setCursor(6, 108);
+            canvas.setTextColor(WHITE, BLACK);
             const char* myDecTxt = isCN ? getScenarioActionNameCN(ctx.userChoice, ctx.currentScenario.type)
                                         : getScenarioActionNameEN(ctx.userChoice, ctx.currentScenario.type);
-            canvas.printf(isCN ? "你的选择: %s" : "YOURS: %s", myDecTxt);
+            canvas.print(myDecTxt);
 
             if (ctx.totalPlays > 0) {
                 canvas.setFont(&fonts::Font0);
@@ -710,7 +714,6 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(6, 26);
             canvas.print(isCN ? "选择: " : "Choice: ");
 
-            // 【动词咬合升级】: 在 EXPLORE 屏输出该 MBTI 人格针对本题的具体行为动词！
             const char* decName = isCN ? getScenarioActionNameCN(res.decision, ctx.currentScenario.type)
                                        : getScenarioActionNameEN(res.decision, ctx.currentScenario.type);
 
