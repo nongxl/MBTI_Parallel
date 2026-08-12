@@ -206,17 +206,17 @@ void drawDualRadarChart(M5Canvas& canvas, int centerX, int centerY, int radius, 
     canvas.setFont(&fonts::Font0);
     canvas.setTextSize(1);
     
-    // 实线绿线表示 YOU (X = 128 ~ 140, Y = 28)
-    canvas.drawLine(128, 28, 140, 28, GREEN);
-    canvas.fillCircle(134, 28, 2, WHITE);
+    // 实线绿线表示 YOU (X = 136 ~ 148, Y = 28)
+    canvas.drawLine(136, 28, 148, 28, GREEN);
+    canvas.fillCircle(142, 28, 2, WHITE);
     canvas.setTextColor(GREEN, BLACK);
-    canvas.setCursor(144, 25);
+    canvas.setCursor(152, 25);
     canvas.print("YOU");
 
-    // 实线紫线表示 MBTI (X = 176 ~ 188, Y = 28)
-    canvas.drawLine(176, 28, 188, 28, mbtiColor);
-    canvas.fillCircle(182, 28, 2, mbtiColor);
+    // 实线紫线表示 MBTI (X = 192 ~ 204, Y = 28)
+    canvas.drawLine(192, 28, 204, 28, mbtiColor);
+    canvas.fillCircle(200, 28, 2, mbtiColor);
     canvas.setTextColor(mbtiColor, BLACK);
-    canvas.setCursor(192, 25);
+    canvas.setCursor(208, 25);
     canvas.print(mbtiName ? mbtiName : "MBTI");
 }

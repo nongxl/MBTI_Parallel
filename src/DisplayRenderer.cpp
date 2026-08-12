@@ -402,7 +402,7 @@ void renderUI(const UIContext& ctx) {
             canvas.setCursor(132, 52);
             canvas.print(getMBTIName(ctx.closestMBTI));
 
-            // 【Phase 6A 核心】: 绘制双多边形叠加雷达图 (实线 YOU 绿 vs 虚线 MBTI 黄)
+            // 【Phase 6A 核心】: 绘制双多边形叠加雷达图 (实线 YOU 绿 vs 虚线 MBTI 紫)
             drawDualRadarChart(canvas, 180, 68, 40, ctx.currentRadar, mbtiRadar, getMBTIName(ctx.closestMBTI), true, isCN);
 
             if (isCN) canvas.setFont(&fonts::efontCN_12);
@@ -454,48 +454,62 @@ void renderUI(const UIContext& ctx) {
         }
 
         case AppState::WHY_MATCH: {
-            // 【Phase 6A 新增】: WHY契合维度解析屏 (显示最接近的 3 个维度分值比较)
+            // 【Phase 6A 精准排版】: 绝对防出界 X 轴最大到达 224px (屏宽 240px，右侧安全保留 16px)
             char titleBuf[48];
-            snprintf(titleBuf, sizeof(titleBuf), isCN ? "为什么最接近 %s？" : "WHY LOOKS LIKE %s?", getMBTIName(ctx.closestMBTI));
+            snprintf(titleBuf, sizeof(titleBuf), isCN ? "为什么更接近 %s？" : "WHY LOOKS LIKE %s?", getMBTIName(ctx.closestMBTI));
             drawHeader(titleBuf, isCN);
 
             const char* dimNamesCN[6] = { "新鲜感", "风险度", "计划性", "实用性", "逻辑性", "社交性" };
             const char* dimNamesEN[6] = { "NOVELTY", "RISK", "PLANNING", "PRACTICAL", "LOGIC", "SOCIAL" };
 
-            if (isCN) canvas.setFont(&fonts::efontCN_12);
-            else canvas.setFont(&fonts::Font0);
-
             for (int k = 0; k < 3; ++k) {
                 int dIdx = ctx.whyMatchDims[k];
-                int yPos = 32 + k * 28;
+                int yPos = 30 + k * 28;
                 const char* dName = isCN ? dimNamesCN[dIdx] : dimNamesEN[dIdx];
                 float uVal = ctx.whyMatchUserVals[k];
                 float mVal = ctx.whyMatchMbtiVals[k];
 
-                // 维度名称
+                if (isCN) canvas.setFont(&fonts::efontCN_12);
+                else canvas.setFont(&fonts::Font0);
+
+                // 维度名称 (X = 6)
                 canvas.setTextColor(CYAN, BLACK);
-                canvas.setCursor(8, yPos);
+                canvas.setCursor(6, yPos);
                 canvas.printf("%s", dName);
 
-                // YOU 比较条 (绿色)
+                // YOU 组 (X = 44)
+                canvas.setFont(&fonts::Font0);
                 canvas.setTextColor(GREEN, BLACK);
-                canvas.setCursor(68, yPos);
-                canvas.printf("YOU:%.0f", uVal);
-                int uW = static_cast<int>(50.0f * (uVal / 100.0f));
-                canvas.fillRect(116, yPos + 1, 50, 8, DARKGREY);
-                if (uW > 0) canvas.fillRect(116, yPos + 1, uW, 8, GREEN);
+                canvas.setCursor(44, yPos + 1);
+                canvas.printf("%2.0f", uVal);
 
-                // MBTI 比较条 (黄色)
-                canvas.setTextColor(YELLOW, BLACK);
-                canvas.setCursor(172, yPos);
-                canvas.printf("%s:%.0f", getMBTIName(ctx.closestMBTI), mVal);
-                int mW = static_cast<int>(50.0f * (mVal / 100.0f));
-                canvas.fillRect(222, yPos + 1, 15, 8, YELLOW);
+                int uW = static_cast<int>(48.0f * (uVal / 100.0f));
+                canvas.fillRect(60, yPos + 2, 48, 8, DARKGREY);
+                if (uW > 0) canvas.fillRect(60, yPos + 2, uW, 8, GREEN);
+
+                // MBTI 组 (X = 116)
+                if (isCN) canvas.setFont(&fonts::efontCN_12);
+                else canvas.setFont(&fonts::Font0);
+
+                canvas.setTextColor(MAGENTA, BLACK);
+                canvas.setCursor(116, yPos);
+                canvas.printf("%s", getMBTIName(ctx.closestMBTI));
+
+                canvas.setFont(&fonts::Font0);
+                canvas.setCursor(144, yPos + 1);
+                canvas.printf("%2.0f", mVal);
+
+                int mW = static_cast<int>(48.0f * (mVal / 100.0f));
+                canvas.fillRect(160, yPos + 2, 48, 8, DARKGREY);
+                if (mW > 0) canvas.fillRect(160, yPos + 2, mW, 8, MAGENTA);
             }
 
+            if (isCN) canvas.setFont(&fonts::efontCN_12);
+            else canvas.setFont(&fonts::Font0);
+
             canvas.setTextColor(WHITE, BLACK);
-            canvas.setCursor(8, 114);
-            canvas.print(isCN ? "核心维度极为吻合，呈现高度同频决策风格" : "CORE AXES ALIGNED CLOSELY");
+            canvas.setCursor(6, 114);
+            canvas.print(isCN ? "核心维度高度契合，呈现同频决策风格" : "CORE AXES ALIGNED CLOSELY");
             break;
         }
 
