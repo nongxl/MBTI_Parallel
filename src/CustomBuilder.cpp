@@ -53,23 +53,25 @@ const char* getTensionNameCN(DecisionIntent intent, int index) {
 void buildCustomScenarioState(const CustomDecisionState& customState, ScenarioState& outState, ScenarioCategory& outCategory, ArchetypeID& outArchetype) {
     outState.reset();
 
-    // 1. 动态确定 Category 与 Archetype
-    if (customState.intent == DecisionIntent::BUY_OR_NOT) {
+    // 【彻底修复分类路由 Bug】: 根据 contextIndex (Step 2 选定的领域对象) 建立一等优先级硬路由！
+    if (customState.contextIndex == 2) { 
+        // 2: 关于旧数码设备/物品 -> 100% 锁定为 PURCHASE (购物/数码/理财)
         outCategory = ScenarioCategory::PURCHASE;
-        outArchetype = (customState.tensionIndex == 0) ? ArchetypeID::DUPLICATE_PURCHASE : ArchetypeID::LIMITED_TIME_PURCHASE;
+        outArchetype = (customState.tensionIndex == 0) ? ArchetypeID::DUPLICATE_PURCHASE : ArchetypeID::QUALITY_VS_COST;
         outState.costType = CostType::BUDGET;
-    } else if (customState.intent == DecisionIntent::GO_OR_NOT || customState.intent == DecisionIntent::ACCEPT_OR_DECLINE) {
-        if (customState.contextIndex == 1) { // 同事 / 工作
-            outCategory = ScenarioCategory::WORK;
-            outArchetype = ArchetypeID::UNEXPECTED_REQUEST;
-            outState.existingPlan = ExistingPlan::WORK;
-        } else { // 朋友 / 旅行
-            outCategory = ScenarioCategory::TRAVEL;
-            outArchetype = ArchetypeID::LAST_MINUTE_OPPORTUNITY;
-            outState.existingPlan = ExistingPlan::STAY_HOME;
-        }
-    } else {
+    } else if (customState.contextIndex == 1) { 
+        // 1: 关于同事/工作项目 -> 100% 锁定为 WORK (职场/协作)
         outCategory = ScenarioCategory::WORK;
+        outArchetype = ArchetypeID::UNEXPECTED_REQUEST;
+        outState.existingPlan = ExistingPlan::WORK;
+    } else if (customState.contextIndex == 0) { 
+        // 0: 关于朋友/老同学 -> 100% 锁定为 TRAVEL (旅行/探险/社交)
+        outCategory = ScenarioCategory::TRAVEL;
+        outArchetype = ArchetypeID::LAST_MINUTE_OPPORTUNITY;
+        outState.existingPlan = ExistingPlan::STAY_HOME;
+    } else { 
+        // 3: 关于个人日常休息/约会 -> 100% 锁定为 DAILY (日常/探索)
+        outCategory = ScenarioCategory::WORK; // 使用工作/日常底层引擎
         outArchetype = ArchetypeID::KNOWN_VS_UNKNOWN;
         outState.existingPlan = ExistingPlan::REST;
     }
