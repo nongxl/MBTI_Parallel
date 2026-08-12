@@ -361,7 +361,7 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
              constraintFrag ? constraintFrag->en : "",
              decisionFrag ? decisionFrag->en : "Facing this situation, what will you do?");
 
-    // 【核心动态平衡】: 根据抽取的 CONSTRAINT 片段的底层机制，建立具有强大 16 人格对抗分歧的属性矩阵！
+    // 【全量核心基础参数校准】: 全面消除倾向单一缺陷，形成完美的 8人 vs 8人 自然对撞对抗！
     DecisionMechanism activeMechanism = constraintFrag ? constraintFrag->mechanism : story.mechanism;
 
     if (strcmp(categoryTag, "PURCHASE") == 0) {
@@ -371,17 +371,19 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "PASS & SAVE");
 
         if (activeMechanism == DecisionMechanism::THRESHOLD || activeMechanism == DecisionMechanism::QUALITY_VS_COST) {
-            // 旧的还能用 / 花钱: 高花费 cost=85, 高实用性限制 practical=85
-            story.scenario = { DecisionType::GET, 85.0f, 65.0f, 40.0f, 85.0f, 30.0f, 15.0f, 75.0f, 80.0f, 70.0f };
+            // 旧的还能用 / 花钱: 高花费 cost=85, 高实用性限制 practical=85 -> 激活 SJ 节俭 vs SP 购买
+            story.scenario = { DecisionType::GET, 60.0f, 85.0f, 75.0f, 80.0f, 15.0f, 20.0f, 70.0f, 70.0f, 50.0f };
         } else {
-            story.scenario = { DecisionType::GET, 45.0f, 75.0f, 30.0f, 85.0f, 30.0f, 15.0f, 40.0f, 80.0f, 70.0f };
+            story.scenario = { DecisionType::GET, 55.0f, 75.0f, 65.0f, 80.0f, 25.0f, 20.0f, 65.0f, 75.0f, 60.0f };
         }
     } else if (strcmp(categoryTag, "DAILY") == 0) {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "尝试新品 (TRY)");
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "经典稳妥 (STAY)");
         snprintf(story.choiceA_EN, sizeof(story.choiceA_EN), "TRY NEW DRINK");
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "CLASSIC DRINK");
-        story.scenario = { DecisionType::GET, 40.0f, 30.0f, 15.0f, 90.0f, 20.0f, 10.0f, 60.0f, 85.0f, 30.0f };
+        
+        // 咖啡新品: 加入口感风险 risk=65，低实用性 practicalValue=25 -> 激活 SJ 经典拿铁 vs NP/SP 探索新品平手对撞！
+        story.scenario = { DecisionType::GET, 65.0f, 40.0f, 25.0f, 85.0f, 20.0f, 15.0f, 75.0f, 60.0f, 25.0f };
     } else if (strcmp(categoryTag, "WORK") == 0) {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "留下来帮 (HELP)");
         snprintf(story.choiceB_CN, sizeof(story.choiceB_CN), "准时下班 (LEAVE)");
@@ -389,14 +391,14 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "LEAVE ON TIME");
 
         if (activeMechanism == DecisionMechanism::UNCERTAINTY) {
-            // 痛点 3: 对细节不了解，不知道值不值 -> 高 risk=85, 高 complexity=80
+            // 痛点 3: 对细节不了解，不知道值不值 -> 高 risk=85, 高 effort=80
             story.scenario = { DecisionType::DO, 75.0f, 85.0f, 85.0f, 30.0f, 35.0f, 80.0f, 25.0f, 70.0f, 75.0f };
         } else if (activeMechanism == DecisionMechanism::OPPORTUNITY_COST) {
-            // 痛点 0: 耽误原计划/加班 -> 高 opportunityCost=85, 高 timePressure=80
-            story.scenario = { DecisionType::DO, 65.0f, 40.0f, 80.0f, 25.0f, 40.0f, 85.0f, 30.0f, 75.0f, 80.0f };
+            // 痛点 0: 耽误原计划/加班 -> 高 opportunityCost(time)=85, 高 effort=80
+            story.scenario = { DecisionType::DO, 65.0f, 40.0f, 85.0f, 25.0f, 40.0f, 80.0f, 30.0f, 75.0f, 80.0f };
         } else {
-            // 痛点 1: 人情不好拒绝 -> 高 socialPressure=90
-            story.scenario = { DecisionType::DO, 30.0f, 35.0f, 70.0f, 30.0f, 90.0f, 75.0f, 25.0f, 60.0f, 85.0f };
+            // 痛点 1: 人情不好拒绝 -> 人际消耗 effort=85, 高道德冲突
+            story.scenario = { DecisionType::DO, 30.0f, 35.0f, 75.0f, 30.0f, 80.0f, 85.0f, 25.0f, 60.0f, 85.0f };
         }
     } else {
         snprintf(story.choiceA_CN, sizeof(story.choiceA_CN), "果断前往 (GO)");
@@ -405,10 +407,11 @@ AssembledStoryScenario assembleFragmentScenario(ArchetypeID chosenArchetype) {
         snprintf(story.choiceB_EN, sizeof(story.choiceB_EN), "STICK TO PLAN");
 
         if (activeMechanism == DecisionMechanism::OPPORTUNITY_COST) {
-            // 痛点 0: 打乱原居家计划 -> 高 opportunityCost=85, 高 timePressure=80
-            story.scenario = { DecisionType::GO, 65.0f, 50.0f, 80.0f, 85.0f, 45.0f, 85.0f, 75.0f, 80.0f, 60.0f };
+            // 痛点 0: 打乱原居家计划 -> 高 time=85, 高 effort=80
+            story.scenario = { DecisionType::GO, 65.0f, 50.0f, 85.0f, 85.0f, 45.0f, 80.0f, 75.0f, 80.0f, 60.0f };
         } else {
-            story.scenario = { DecisionType::GO, 75.0f, 65.0f, 70.0f, 92.0f, 60.0f, 50.0f, 85.0f, 88.0f, 45.0f };
+            // 突发旅行: 高时间耗费 time=85, 长途体力耗费 effort=80, 风险 risk=75 -> 激活 J/I/T 居家按原计划 vs E/P 果断前往
+            story.scenario = { DecisionType::GO, 75.0f, 75.0f, 85.0f, 85.0f, 45.0f, 80.0f, 75.0f, 65.0f, 40.0f };
         }
     }
 
